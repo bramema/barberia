@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Barbería Royal — Agenda tu cita</title>
+  <meta name="description" content="Reserva tu cita en Barbería Royal: cortes clásicos, afeitado con navaja y cuidado de barba.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jost:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Tilt+Neon&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><clipPath id="pole-clip"><rect x="8" y="5" width="8" height="14" rx="1.5"/></clipPath></defs></svg>
+
+  <header class="nav">
+    <div class="pole-bar" aria-hidden="true"></div>
+    <div class="container nav__inner">
+      <a href="#inicio" class="logo" aria-label="Barbería Royal, inicio">
+        <span class="logo__mark" data-icon="scissors" aria-hidden="true"></span>
+        <span>Royal<small>BARBERSHOP</small></span>
+      </a>
+      <button class="nav__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks"><span></span></button>
+      <nav class="nav__links" id="navLinks" aria-label="Principal">
+        <a href="#inicio">Inicio</a>
+        <a href="#nosotros">Nosotros</a>
+        <a href="#agendar">Agendar</a>
+        <a href="admin.html" class="nav__admin">Panel Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="inicio">
+      <div class="container">
+        <p class="hero__kicker">Barbería de lujo, desde 2015</p>
+        <h1 class="hero__title" aria-label="BARBERSHOP"><span class="ltr" style="--i:0" aria-hidden="true">B</span><span class="ltr" style="--i:1" aria-hidden="true">A</span><span class="ltr" style="--i:2" aria-hidden="true">R</span><span class="ltr" style="--i:3" aria-hidden="true">B</span><span class="ltr" style="--i:4" aria-hidden="true">E</span><span class="ltr" style="--i:5" aria-hidden="true">R</span><span class="ltr" style="--i:6" aria-hidden="true">S</span><span class="ltr" style="--i:7" aria-hidden="true">H</span><span class="ltr" style="--i:8" aria-hidden="true">O</span><span class="ltr" style="--i:9" aria-hidden="true">P</span></h1>
+        <p class="hero__sub">Taller de estilo masculino. Corte, navaja y barba con técnica clásica.</p>
+        <button class="btn btn--pole" id="heroCta" type="button">Agendar Cita</button>
+      </div>
+      <div class="hero__train" id="heroTrain" aria-hidden="true"><div class="hero__train-track"></div></div>
+    </section>
+
+    <!-- NOSOTROS -->
+    <section class="section" id="nosotros">
+      <div class="container">
+        <div class="section__head">
+          <h2>Tradición con filo propio</h2>
+          <div class="divider"></div>
+          <p>Un espacio para tomarse el tiempo y salir impecable.</p>
+        </div>
+        <div class="panel about">
+          <div class="features">
+            <article class="service" style="--ring:var(--red)"><div class="service__icon" data-icon="razor" aria-hidden="true"></div><h3 class="service__name">Navaja y toalla caliente</h3><p class="service__meta">Afeitado clásico con preparación de piel y acabado con bálsamo.</p></article>
+            <article class="service" style="--ring:#fff"><div class="service__icon" data-icon="scissors" aria-hidden="true"></div><h3 class="service__name">Cortes a medida</h3><p class="service__meta">Analizamos tu rostro y tu rutina para recomendarte el corte ideal.</p></article>
+            <article class="service" style="--ring:var(--blue)"><div class="service__icon" data-icon="mustache" aria-hidden="true"></div><h3 class="service__name">Barba definida</h3><p class="service__meta">Perfilado, recorte y cuidado para una barba que se vea cuidada.</p></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AGENDAMIENTO -->
+    <section class="section" id="agendar">
+      <div class="container">
+        <div class="section__head">
+          <h2>Reserva tu turno</h2>
+          <div class="divider"></div>
+          <p>Elige servicio, día y hora. Atendemos de lunes a sábado, de 9:00 a 19:00.</p>
+        </div>
+
+        <div class="led-frame" id="bookingFrame">
+          <div class="led-frame__stage" id="bookingStage" aria-hidden="true"></div>
+          <div class="led-frame__ring led-frame__ring--a" aria-hidden="true"></div>
+          <div class="led-frame__ring led-frame__ring--b" aria-hidden="true"></div>
+          <div class="led-frame__inner" id="bookingMain">
+            <form id="bookingForm" class="booking__grid" novalidate>
+              <!-- 1. Servicio -->
+              <section class="panel panel--wide" aria-labelledby="t-serv">
+                <h3 class="panel__title" id="t-serv"><span class="step">1</span> Selecciona tu servicio</h3>
+                <div class="services" id="services" role="radiogroup" aria-label="Servicios"></div>
+                <p class="field__error" id="err-service" style="display:none">Elige un servicio para continuar.</p>
+              </section>
+
+              <!-- 2. Calendario -->
+              <section class="panel" aria-labelledby="t-cal">
+                <h3 class="panel__title" id="t-cal"><span class="step">2</span> Elige el día</h3>
+                <div class="cal__head">
+                  <span class="cal__title" id="calTitle" aria-live="polite"></span>
+                  <div class="cal__nav">
+                    <button type="button" class="icon-btn" id="calPrev" aria-label="Mes anterior" data-icon="chevL"></button>
+                    <button type="button" class="icon-btn" id="calNext" aria-label="Mes siguiente" data-icon="chevR"></button>
+                  </div>
+                </div>
+                <div class="cal__grid" id="calGrid"></div>
+              </section>
+
+              <!-- 3. Horas -->
+              <section class="panel" aria-labelledby="t-hora">
+                <h3 class="panel__title" id="t-hora"><span class="step">3</span> Horas disponibles</h3>
+                <div id="slots" class="slots" role="radiogroup" aria-label="Horas disponibles"></div>
+                <p class="hint" id="slotsHint">Primero selecciona un día en el calendario.</p>
+              </section>
+
+              <!-- 4. Datos -->
+              <section class="panel" aria-labelledby="t-datos">
+                <h3 class="panel__title" id="t-datos"><span class="step">4</span> Tus datos</h3>
+                <div class="fields">
+                  <div class="field" id="f-name">
+                    <label for="name">Nombre completo</label>
+                    <input type="text" id="name" name="name" autocomplete="name" placeholder="Ej. Carlos Pérez" maxlength="80">
+                    <span class="field__error">Escribe tu nombre completo (nombre y apellido).</span>
+                  </div>
+                  <div class="field" id="f-email">
+                    <label for="email">Correo electrónico</label>
+                    <input type="email" id="email" name="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" maxlength="100">
+                    <span class="field__error">Escribe un correo válido, por ejemplo nombre@dominio.com.</span>
+                  </div>
+                  <div class="field">
+                    <label for="datetime">Fecha y hora</label>
+                    <input type="text" id="datetime" readonly placeholder="Aún sin seleccionar" tabindex="-1">
+                  </div>
+                </div>
+              </section>
+
+              <!-- Resumen -->
+              <section class="panel summary" aria-labelledby="t-sum">
+                <h3 class="panel__title" id="t-sum">Scheduling · Resumen</h3>
+                <div class="summary__row"><span>Servicio</span><strong id="sum-service">—</strong></div>
+                <div class="summary__row"><span>Fecha</span><strong id="sum-date">—</strong></div>
+                <div class="summary__row"><span>Hora</span><strong id="sum-time">—</strong></div>
+                <div class="summary__total"><span>Total</span><span id="sum-total">$0</span></div>
+                <button type="submit" class="btn btn--red" id="submitBtn">Confirmar cita</button>
+              </section>
+            </form>
+
+            <!-- Confirmación -->
+            <section class="confirm" id="confirmCard" aria-live="polite" tabindex="-1">
+              <span class="cane" aria-hidden="true"></span><span class="cane cane--in" aria-hidden="true"></span>
+              <div class="confirm__check" data-icon="check" aria-hidden="true"></div>
+              <h3>¡Cita confirmada!</h3>
+              <p>Te esperamos en la silla. Guarda el código de tu reserva.</p>
+              <div class="ticket">
+                <div class="ticket__head"><span class="ticket__lbl">Código de reserva</span><strong class="ticket__code" id="c-id"></strong></div>
+                <div class="summary__row"><span>Cliente</span><strong id="c-name"></strong></div>
+                <div class="summary__row"><span>Servicio</span><strong id="c-service"></strong></div>
+                <div class="summary__row"><span>Fecha</span><strong id="c-date"></strong></div>
+                <div class="summary__row"><span>Hora</span><strong id="c-time"></strong></div>
+              </div>
+              <button type="button" class="btn btn--pole" id="newBooking">Agendar otra cita</button>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="pole-bar" aria-hidden="true"></div>
+      <p>© <span id="year"></span> Barbería Royal · Lunes a sábado, 9:00 – 19:00</p>
+      <p style="margin-top:6px"><a href="admin.html" style="text-decoration:underline">Acceso al panel de administración</a></p>
+    </div>
+  </footer>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+  <!-- Enlace al archivo de script externo -->
+  <script src="script/index.js"></script>
+</body>
+</html>
