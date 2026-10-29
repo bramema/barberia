@@ -41,33 +41,81 @@
   <main class="container">
 
     <!-- Seccion 1: Pantalla / Formulario de Inicio de Sesion -->
-    <section id="loginSection" class="section">
-      <div class="section__head">
-        <h2>Acceso de Personal</h2>
-        <div class="divider"></div>
-        <p>Ingresa tus credenciales para gestionar tu agenda diaria.</p>
-      </div>
+    <section id="loginSection" class="section login-container">
+      <div class="lwrap lwrap--barber">
+        <div class="lcard">
+          <span class="lcard__bump lcard__bump--r1" aria-hidden="true"></span>
+          <span class="lcard__bump lcard__bump--r2" aria-hidden="true"></span>
+          <span class="lcard__bump lcard__bump--l1" aria-hidden="true"></span>
+          <span class="lcard__bump lcard__bump--l2" aria-hidden="true"></span>
 
-      <div class="led-frame" style="max-width: 480px; margin: 0 auto;">
-        <div class="led-frame__inner">
-          <form id="loginForm" class="panel" novalidate>
-            <h3 class="panel__title">Iniciar Sesión</h3>
-            <div class="fields">
-              <div class="field" id="f-user">
-                <label for="loginUser">Correo</label>
-                <input type="email" id="loginUser" name="username" placeholder="barbero@ejemplo.com" required autocomplete="username">
+          <div class="lcard__face">
+            <a class="lcard__back" href="index.html" aria-label="Volver al inicio">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+            </a>
+
+            <!-- Ilustración: poste de barbero animado -->
+            <div class="lart" aria-hidden="true">
+              <span class="lart__dot lart__dot--a"></span><span class="lart__dot lart__dot--b"></span>
+              <span class="lart__dot lart__dot--c"></span><span class="lart__dot lart__dot--d"></span>
+              <svg class="lart__svg" viewBox="0 0 260 260">
+                <defs><clipPath id="lpClip"><rect x="95" y="58" width="70" height="136" rx="12"/></clipPath></defs>
+                <g class="lp-dashes">
+                  <path class="lp-dash" d="M44 196l24-24"/><path class="lp-dash d2" d="M62 214l34-34"/><path class="lp-dash d3" d="M28 176l14-14"/>
+                </g>
+                <g transform="rotate(-16 130 130)"><g class="lp-float">
+                  <g clip-path="url(#lpClip)"><g class="lp-stripes">
+                    <polygon fill="#E53935" points="95,-32 165,-60 165,-45 95,-17"/><polygon fill="#fff" points="95,-17 165,-45 165,-30 95,-2"/>
+                    <polygon fill="#1E88E5" points="95,-2 165,-30 165,-15 95,13"/><polygon fill="#fff" points="95,13 165,-15 165,0 95,28"/>
+                    <polygon fill="#E53935" points="95,28 165,0 165,15 95,43"/><polygon fill="#fff" points="95,43 165,15 165,30 95,58"/>
+                    <polygon fill="#1E88E5" points="95,58 165,30 165,45 95,73"/><polygon fill="#fff" points="95,73 165,45 165,60 95,88"/>
+                    <polygon fill="#E53935" points="95,88 165,60 165,75 95,103"/><polygon fill="#fff" points="95,103 165,75 165,90 95,118"/>
+                    <polygon fill="#1E88E5" points="95,118 165,90 165,105 95,133"/><polygon fill="#fff" points="95,133 165,105 165,120 95,148"/>
+                    <polygon fill="#E53935" points="95,148 165,120 165,135 95,163"/><polygon fill="#fff" points="95,163 165,135 165,150 95,178"/>
+                    <polygon fill="#1E88E5" points="95,178 165,150 165,165 95,193"/><polygon fill="#fff" points="95,193 165,165 165,180 95,208"/>
+                    <polygon fill="#E53935" points="95,208 165,180 165,195 95,223"/><polygon fill="#fff" points="95,223 165,195 165,210 95,238"/>
+                    <polygon fill="#1E88E5" points="95,238 165,210 165,225 95,253"/>
+                  </g></g>
+                  <rect x="103" y="66" width="8" height="120" rx="4" fill="#fff" opacity=".35"/>
+                  <rect class="lp-line" x="95" y="58" width="70" height="136" rx="12"/>
+                  <rect class="lp-line lp-cap" x="88" y="44" width="84" height="16" rx="6"/>
+                  <rect class="lp-line lp-cap" x="88" y="192" width="84" height="16" rx="6"/>
+                  <rect class="lp-line" x="104" y="208" width="52" height="8" rx="4" fill="#f0f0f3"/>
+                  <circle class="lp-line" cx="130" cy="32" r="11" fill="#fff"/>
+                </g></g>
+              </svg>
+            </div>
+
+            <form id="loginForm" class="lform" novalidate>
+              <h2 class="ltitle">Acceso barbero</h2>
+
+              <div class="field lfield" id="f-user">
+                <label class="sr-only" for="loginUser">Correo</label>
+                <svg class="lfield__ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+                <input type="email" id="loginUser" name="username" placeholder="Correo" autocomplete="username" required>
                 <span class="field__error">Ingresa tu correo.</span>
               </div>
-              <div class="field" id="f-pass">
-                <label for="loginPass">Contraseña</label>
-                <input type="password" id="loginPass" name="password" placeholder="••••••••" required autocomplete="current-password">
+
+              <div class="field lfield" id="f-pass">
+                <label class="sr-only" for="loginPass">Contraseña</label>
+                <svg class="lfield__ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                <input type="password" id="loginPass" name="password" placeholder="Contraseña" autocomplete="current-password" required>
                 <span class="field__error">Ingresa tu contraseña.</span>
               </div>
-            </div>
-            <button type="submit" class="btn btn--red" style="width: 100%; margin-top: 20px;">
-              Ingresar al Panel
-            </button>
-          </form>
+
+              <button type="submit" class="lbtn">
+                <span>Iniciar sesión</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+            </form>
+          </div>
+
+          <!-- Accesos rápidos -->
+          <nav class="lcard__links" aria-label="Otros accesos">
+            <a class="lcircle lcircle--home" href="index.html" title="Inicio" aria-label="Inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a>
+            <a class="lcircle lcircle--barber" href="barbero.html" title="Barbero" aria-label="Acceso barbero" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.8"/><circle cx="6" cy="18" r="2.8"/><path d="M8.2 7.8L21 18.5M8.2 16.2L21 5.5"/></svg></a>
+            <a class="lcircle lcircle--admin" href="admin.html" title="Administrador" aria-label="Acceso administrador"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18L3 8l5 4 4-7 4 7 5-4-1 10z"/><path d="M4 21h16"/></svg></a>
+          </nav>
         </div>
       </div>
     </section>
