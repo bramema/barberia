@@ -1,0 +1,8 @@
+{
+  "name": "barberia-royal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agendamiento de citas para barbería. Las citas se guardan en data/citas.json",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=14" }
+}

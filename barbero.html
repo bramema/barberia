@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel del Barbero — Barbería Royal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jost:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Tilt+Neon&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="pole-clip">
+        <rect x="8" y="5" width="8" height="14" rx="1.5"/>
+      </clipPath>
+    </defs>
+  </svg>
+
+  <!-- Encabezado y Navegación Principal -->
+  <header class="nav">
+    <div class="pole-bar" aria-hidden="true"></div>
+    <div class="container nav__inner">
+      <a href="index.html" class="logo" aria-label="Barbería Royal">
+        <span class="logo__mark" data-icon="scissors" aria-hidden="true"></span>
+        <span>Royal<small>PANEL BARBERO</small></span>
+      </a>
+      <button class="nav__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks">
+        <span></span>
+      </button>
+      <nav class="nav__links" id="navLinks" aria-label="Navegación Barbero">
+        <span id="barberGreeting" class="user-greeting" style="display:none;">Hola, <strong id="barberNameText">Barbero</strong></span>
+        <button id="logoutBtn" class="btn btn--ghost btn--sm" style="display:none;">Cerrar Sesión</button>
+        <a href="index.html" class="nav__admin">← Vista Cliente</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Seccion 1: Pantalla / Formulario de Inicio de Sesion -->
+    <section id="loginSection" class="section">
+      <div class="section__head">
+        <h2>Acceso de Personal</h2>
+        <div class="divider"></div>
+        <p>Ingresa tus credenciales para gestionar tu agenda diaria.</p>
+      </div>
+
+      <div class="led-frame" style="max-width: 480px; margin: 0 auto;">
+        <div class="led-frame__inner">
+          <form id="loginForm" class="panel" novalidate>
+            <h3 class="panel__title">Iniciar Sesión</h3>
+            <div class="fields">
+              <div class="field" id="f-user">
+                <label for="loginUser">Correo</label>
+                <input type="email" id="loginUser" name="username" placeholder="barbero@ejemplo.com" required autocomplete="username">
+                <span class="field__error">Ingresa tu correo.</span>
+              </div>
+              <div class="field" id="f-pass">
+                <label for="loginPass">Contraseña</label>
+                <input type="password" id="loginPass" name="password" placeholder="••••••••" required autocomplete="current-password">
+                <span class="field__error">Ingresa tu contraseña.</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn--red" style="width: 100%; margin-top: 20px;">
+              Ingresar al Panel
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seccion 2: Panel de Trabajo del Barbero (Oculto hasta autenticarse) -->
+    <section id="barberDashboard" class="section" style="display: none;">
+      <div class="admin-top">
+        <h1>Mi Agenda de Trabajo</h1>
+        <p>Consulta tus turnos asignados para la jornada y gestiona su progreso.</p>
+      </div>
+
+      <!-- Tarjetas de Métricas Rápidas -->
+      <section class="stats" aria-label="Métricas del Barbero">
+        <div class="stat">
+          <div class="service__icon stat__icon" data-icon="scissors" aria-hidden="true"></div>
+          <div>
+            <div class="stat__label">Citas para hoy</div>
+            <div class="stat__value" id="stat-today">0</div>
+          </div>
+        </div>
+        <div class="stat stat--active">
+          <div class="service__icon stat__icon" data-icon="pole" aria-hidden="true"></div>
+          <div>
+            <div class="stat__label">Pendientes</div>
+            <div class="stat__value" id="stat-pending">0</div>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="service__icon stat__icon" data-icon="crown" aria-hidden="true"></div>
+          <div>
+            <div class="stat__label">Completadas hoy</div>
+            <div class="stat__value" id="stat-completed">0</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabla de Citas Asignadas -->
+      <div class="led-frame" id="ledFrame" style="margin-bottom:70px">
+        <div class="led-frame__stage" id="ledStage" aria-hidden="true"></div>
+        <div class="led-frame__ring led-frame__ring--a" aria-hidden="true"></div>
+        <div class="led-frame__ring led-frame__ring--b" aria-hidden="true"></div>
+        
+        <div class="led-frame__inner">
+          <div class="toolbar">
+            <div class="filters" role="group" aria-label="Filtrar citas por fecha">
+              <button class="chip is-active" data-filter="today" type="button">Hoy</button>
+              <button class="chip" data-filter="upcoming" type="button">Próximas</button>
+              <button class="chip" data-filter="all" type="button">Todas</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Cliente</th>
+                  <th>Servicio</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="barberTbody">
+                <!-- Se llena dinámicamente desde la BD -->
+              </tbody>
+            </table>
+            <div class="empty" id="barberEmpty" hidden>
+              <strong>No hay citas asignadas</strong>
+              No tienes servicios agendados para este filtro.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/conexion.js"></script>
+  <script src="script/barbero.js"></script>
+</body>
+</html>

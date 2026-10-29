@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Admin — Barbería Royal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jost:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Tilt+Neon&display=swap" rel="stylesheet">
+  <!-- Enlace a la hoja de estilos compartida -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="img/edc4bc20-2fe6-489e-b3e7-3bf4e2a25070.png">
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="pole-clip"><rect x="8" y="5" width="8" height="14" rx="1.5"/></clipPath>
+    </defs>
+  </svg>
+
+  <!-- Encabezado de Navegación -->
+  <header class="nav">
+    <div class="pole-bar" aria-hidden="true"></div>
+    <div class="container nav__inner">
+      <a href="index.html" class="logo" aria-label="Barbería Royal">
+        <span class="logo__mark" data-icon="scissors" aria-hidden="true"></span>
+        <span>Royal<small>PANEL ADMIN</small></span>
+      </a>
+      <button class="nav__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks">
+        <span></span>
+      </button>
+      <nav class="nav__links" id="navLinks" aria-label="Principal">
+        <span id="adminGreeting" class="user-greeting" style="display:none;">Admin Conectado</span>
+        <button id="logoutBtn" class="btn btn--ghost btn--sm" style="display:none;">Cerrar Sesión</button>
+        <a href="index.html" class="nav__admin">← Volver a la vista cliente</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero__train hero__train--flow" id="heroTrain" aria-hidden="true"><div class="hero__train-track"></div></div>
+
+  <main class="container">
+
+    <!-- =========================================================
+         SECCIÓN 1: INICIO DE SESIÓN CON CONTRASEÑA (Visible por defecto)
+         ========================================================= -->
+    <section id="adminLoginSection" class="section">
+      <div class="admin-top" style="text-align: center; padding-top: 10px;">
+        <h1>Acceso Administrativo</h1>
+        <p>Introduce tu contraseña para desbloquear el panel de control y gestión de citas.</p>
+      </div>
+
+      <div class="led-frame" style="max-width: 440px; margin: 30px auto 70px;">
+        <div class="led-frame__inner">
+          <form id="adminLoginForm" class="panel" novalidate>
+            <h3 class="panel__title">Credenciales de Acceso</h3>
+            <div class="fields">
+              <div class="field" id="f-admin-user">
+                <label for="adminUser">Correo</label>
+                <input type="email" id="adminUser" name="adminUser" placeholder="admin@ejemplo.com" autocomplete="username" required>
+                <span class="field__error">Ingresa el correo del administrador.</span>
+              </div>
+              <div class="field" id="f-admin-pass">
+                <label for="adminPass">Contraseña</label>
+                <input type="password" id="adminPass" name="adminPass" placeholder="••••••••" autocomplete="current-password" required>
+                <span class="field__error">Ingresa tu contraseña.</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn--blue" style="width: 100%; margin-top: 20px;">
+              Iniciar Sesión
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =========================================================
+         SECCIÓN 2: PANEL DE CONTROL GENERAL (Oculto hasta autenticarse)
+         ========================================================= -->
+    <div id="adminMainPanel" style="display: none;">
+      <div class="admin-top">
+        <h1>Panel de control</h1>
+        <p>Gestiona las citas agendadas conectadas directamente a la base de datos.</p>
+      </div>
+
+      <div class="led-frame" id="ledFrame" style="margin-bottom:70px">
+        <div class="led-frame__stage" id="ledStage" aria-hidden="true"></div>
+        <div class="led-frame__ring led-frame__ring--a" aria-hidden="true"></div>
+        <div class="led-frame__ring led-frame__ring--b" aria-hidden="true"></div>
+        <div class="led-frame__inner">
+          
+          <!-- Métricas y Estadísticas -->
+          <section class="stats" aria-label="Métricas" style="margin-top:0">
+            <div class="stat"><div class="service__icon stat__icon" data-icon="pole" aria-hidden="true"></div><div><div class="stat__label">Total de citas</div><div class="stat__value" id="m-total">0</div></div></div>
+            <div class="stat stat--active"><div class="service__icon stat__icon" data-icon="scissors" aria-hidden="true"></div><div><div class="stat__label">Citas activas</div><div class="stat__value" id="m-active">0</div></div></div>
+            <div class="stat stat--cancel"><div class="service__icon stat__icon" data-icon="razor" aria-hidden="true"></div><div><div class="stat__label">Citas canceladas</div><div class="stat__value" id="m-cancel">0</div></div></div>
+          </section>
+
+          <!-- Listado de Citas y Filtros -->
+          <section aria-label="Listado de citas">
+            <div class="toolbar">
+              <div class="filters" role="group" aria-label="Filtrar por estado">
+                <button class="chip is-active" data-filter="all" type="button">Todas</button>
+                <button class="chip" data-filter="active" type="button">Activas</button>
+                <button class="chip" data-filter="cancelled" type="button">Canceladas</button>
+              </div>
+              <a href="index.html#agendar" class="btn btn--blue btn--sm">Nueva cita</a>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>Cliente</th><th>Correo</th><th>Servicio</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+              </table>
+              <div class="empty" id="empty" hidden>
+                <strong>Aún no hay citas</strong>
+                Cuando un cliente reserve desde la vista cliente, aparecerá aquí.
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal para reagendar cita -->
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__box has-cane">
+      <span class="cane" aria-hidden="true"></span><span class="cane cane--in" aria-hidden="true"></span>
+      <h3 id="modalTitle">Reagendar cita</h3>
+      <p class="modal__who" id="modalWho"></p>
+      <div class="fields">
+        <div class="field" id="f-date">
+          <label for="newDate">Nueva fecha</label>
+          <input type="date" id="newDate">
+          <span class="field__error" id="dateErr">Elige una fecha futura de lunes a sábado.</span>
+        </div>
+        <div class="field" id="f-time">
+          <label for="newTime">Nueva hora</label>
+          <select id="newTime"></select>
+          <span class="field__error">Elige una hora disponible.</span>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" id="modalCancel">Cerrar</button>
+        <button type="button" class="btn btn--blue" id="modalSave">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+  <!-- Script independiente de la administración -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/conexion.js"></script>
+  <script src="script/admin.js"></script>
+
+</body>
+</html>

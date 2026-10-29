@@ -8,31 +8,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jost:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Tilt+Neon&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="icon" href="../img/edc4bc20-2fe6-489e-b3e7-3bf4e2a25070.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="img/edc4bc20-2fe6-489e-b3e7-3bf4e2a25070.png">
 </head>
 <body>
 
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-    <defs>
-      <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.8"/><circle cx="6" cy="18" r="2.8"/><path d="M8.2 7.8L21 18.5M8.2 16.2L21 5.5"/></symbol>
-      <symbol id="i-razor" viewBox="0 0 24 24"><g transform="rotate(-35 12 12)"><rect x="2" y="9.8" width="9" height="4.4" rx="1.6"/><path d="M11 10.5h8.2a1.8 1.8 0 0 1 1.8 1.8V14H11"/><circle cx="11" cy="12" r=".9"/></g></symbol>
-      <symbol id="i-mustache" viewBox="0 0 24 24"><path d="M12 10.4C10.6 8.8 8.2 8.4 6.2 9.2C4.2 10 2.8 11.6 2.2 14C4 12.9 5.6 13 7 14C8.8 15.3 10.6 15.2 12 13.2C13.4 15.2 15.2 15.3 17 14C18.4 13 20 12.9 21.8 14C21.2 11.6 19.8 10 17.8 9.2C15.8 8.4 13.4 8.8 12 10.4z"/></symbol>
-      <symbol id="i-pole" viewBox="0 0 24 24"><rect x="8" y="5" width="8" height="14" rx="1.5"/><path d="M8 9.5l8-3.5M8 14l8-3.5M8 18.5l8-3.5"/><path d="M10 5V3M14 5V3M10 19v2M14 19v2"/></symbol>
-      <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M10 3h4v3h-4z"/><path d="M8 9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"/><path d="M8 13h8"/></symbol>
-      <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 18L3 8l5 4 4-7 4 7 5-4-1 10z"/><path d="M4 21h16"/></symbol>
-      <symbol id="i-comb" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="5" rx="1.2"/><path d="M5.5 12v5M8.5 12v5M11.5 12v5M14.5 12v5M17.5 12v5"/></symbol>
-      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
-      <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
-      <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
-    </defs>
-  </svg>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><clipPath id="pole-clip"><rect x="8" y="5" width="8" height="14" rx="1.5"/></clipPath></defs></svg>
 
   <header class="nav">
     <div class="pole-bar" aria-hidden="true"></div>
     <div class="container nav__inner">
       <a href="#inicio" class="logo" aria-label="Barbería Royal, inicio">
-        <span class="logo__mark" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-scissors"/></svg></span>
+        <span class="logo__mark" data-icon="scissors" aria-hidden="true"></span>
         <span>Royal<small>BARBERSHOP</small></span>
       </a>
       <button class="nav__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks"><span></span></button>
@@ -40,7 +27,7 @@
         <a href="#inicio">Inicio</a>
         <a href="#nosotros">Nosotros</a>
         <a href="#agendar">Agendar</a>
-        <a href="vistas/admin.html" class="nav__admin">Panel Admin</a>
+        <a href="admin.html" class="nav__admin">Panel Admin</a>
       </nav>
     </div>
   </header>
@@ -54,9 +41,7 @@
         <p class="hero__sub">Taller de estilo masculino. Corte, navaja y barba con técnica clásica.</p>
         <button class="btn btn--pole" id="heroCta" type="button">Agendar Cita</button>
       </div>
-      <div class="hero__tools" aria-hidden="true">
-        <svg class="ico" aria-hidden="true"><use href="#i-scissors"/></svg><svg class="ico" aria-hidden="true"><use href="#i-razor"/></svg><svg class="ico" aria-hidden="true"><use href="#i-pole"/></svg><svg class="ico" aria-hidden="true"><use href="#i-bottle"/></svg><svg class="ico" aria-hidden="true"><use href="#i-comb"/></svg>
-      </div>
+      <div class="hero__train" id="heroTrain" aria-hidden="true"><div class="hero__train-track"></div></div>
     </section>
 
     <!-- NOSOTROS -->
@@ -67,24 +52,12 @@
           <div class="divider"></div>
           <p>Un espacio para tomarse el tiempo y salir impecable.</p>
         </div>
-        <div class="features">
-          <article class="sign sign--red"><i class="sign__chain" aria-hidden="true"></i><i class="sign__chain sign__chain--r" aria-hidden="true"></i><span class="sign__pole" aria-hidden="true"></span><h3>Navaja y toalla caliente</h3><span class="sign__orn" aria-hidden="true"><i></i></span><p>Afeitado clásico con preparación de piel y acabado con bálsamo.</p></article>
-          <article class="sign"><i class="sign__chain" aria-hidden="true"></i><i class="sign__chain sign__chain--r" aria-hidden="true"></i><span class="sign__pole" aria-hidden="true"></span><h3>Cortes a medida</h3><span class="sign__orn" aria-hidden="true"><i></i></span><p>Analizamos tu rostro y tu rutina para recomendarte el corte ideal.</p></article>
-          <article class="sign sign--blue"><i class="sign__chain" aria-hidden="true"></i><i class="sign__chain sign__chain--r" aria-hidden="true"></i><span class="sign__pole" aria-hidden="true"></span><h3>Barba definida</h3><span class="sign__orn" aria-hidden="true"><i></i></span><p>Perfilado, recorte y cuidado para una barba que se vea cuidada.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <!-- BANNER LED -->
-    <section class="led" id="oferta" aria-label="Promoción de los martes">
-      <div class="container">
-        <div class="led__panel" id="ledPanel" role="img" aria-label="Martes de oferta: agenda tu cita y recibe tu café luego de tu visita">
-          <div class="led__stage" id="ledStage" aria-hidden="true"></div>
-          <div class="led__center" aria-hidden="true">
-            <svg class="ico led__cup" viewBox="0 0 24 24"><path d="M5 11h11v4.5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5 15.5z"/><path d="M16 12h1.4a2.3 2.3 0 0 1 0 4.6H15.6"/><path d="M4 22h13"/><path class="steam" d="M8 8.5c-1-1.2 1-2.2 0-3.6"/><path class="steam s2" d="M11.5 8.5c-1-1.2 1-2.2 0-3.6"/><path class="steam s3" d="M15 8.5c-1-1.2 1-2.2 0-3.6"/></svg>
+        <div class="panel about">
+          <div class="features">
+            <article class="service" style="--ring:var(--red)"><div class="service__icon" data-icon="razor" aria-hidden="true"></div><h3 class="service__name">Navaja y toalla caliente</h3><p class="service__meta">Afeitado clásico con preparación de piel y acabado con bálsamo.</p></article>
+            <article class="service" style="--ring:#fff"><div class="service__icon" data-icon="scissors" aria-hidden="true"></div><h3 class="service__name">Cortes a medida</h3><p class="service__meta">Analizamos tu rostro y tu rutina para recomendarte el corte ideal.</p></article>
+            <article class="service" style="--ring:var(--blue)"><div class="service__icon" data-icon="mustache" aria-hidden="true"></div><h3 class="service__name">Barba definida</h3><p class="service__meta">Perfilado, recorte y cuidado para una barba que se vea cuidada.</p></article>
           </div>
-          <div class="led__ring led__ring--a" aria-hidden="true"></div>
-          <div class="led__ring led__ring--b" aria-hidden="true"></div>
         </div>
       </div>
     </section>
@@ -98,15 +71,11 @@
           <p>Elige servicio, día y hora. Atendemos de lunes a sábado, de 9:00 a 19:00.</p>
         </div>
 
-        <div class="booking">
-          <!-- Cartel LED izquierdo (rojo/blanco) -->
-          <aside class="neon neon--red" aria-hidden="true">
-            <svg class="ico neon__tube" aria-hidden="true"><use href="#i-scissors"/></svg>
-            <span class="neon__word">AGENDA TU CITA</span>
-            <svg class="ico neon__tube" aria-hidden="true"><use href="#i-scissors"/></svg>
-          </aside>
-
-          <div id="bookingMain">
+        <div class="led-frame" id="bookingFrame">
+          <div class="led-frame__stage" id="bookingStage" aria-hidden="true"></div>
+          <div class="led-frame__ring led-frame__ring--a" aria-hidden="true"></div>
+          <div class="led-frame__ring led-frame__ring--b" aria-hidden="true"></div>
+          <div class="led-frame__inner" id="bookingMain">
             <form id="bookingForm" class="booking__grid" novalidate>
               <!-- 1. Servicio -->
               <section class="panel panel--wide" aria-labelledby="t-serv">
@@ -121,8 +90,8 @@
                 <div class="cal__head">
                   <span class="cal__title" id="calTitle" aria-live="polite"></span>
                   <div class="cal__nav">
-                    <button type="button" class="icon-btn" id="calPrev" aria-label="Mes anterior"><svg class="ico" aria-hidden="true"><use href="#i-chev-l"/></svg></button>
-                    <button type="button" class="icon-btn" id="calNext" aria-label="Mes siguiente"><svg class="ico" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+                    <button type="button" class="icon-btn" id="calPrev" aria-label="Mes anterior" data-icon="chevL"></button>
+                    <button type="button" class="icon-btn" id="calNext" aria-label="Mes siguiente" data-icon="chevR"></button>
                   </div>
                 </div>
                 <div class="cal__grid" id="calGrid"></div>
@@ -168,27 +137,21 @@
             </form>
 
             <!-- Confirmación -->
-            <section class="panel confirm" id="confirmCard" aria-live="polite" tabindex="-1">
-              <div class="confirm__check" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></div>
+            <section class="confirm" id="confirmCard" aria-live="polite" tabindex="-1">
+              <span class="cane" aria-hidden="true"></span><span class="cane cane--in" aria-hidden="true"></span>
+              <div class="confirm__check" data-icon="check" aria-hidden="true"></div>
               <h3>¡Cita confirmada!</h3>
-              <p>Te esperamos. Guarda estos datos de tu reserva.</p>
+              <p>Te esperamos en la silla. Guarda el código de tu reserva.</p>
               <div class="ticket">
-                <div class="summary__row"><span>Código</span><strong id="c-id"></strong></div>
+                <div class="ticket__head"><span class="ticket__lbl">Código de reserva</span><strong class="ticket__code" id="c-id"></strong></div>
                 <div class="summary__row"><span>Cliente</span><strong id="c-name"></strong></div>
                 <div class="summary__row"><span>Servicio</span><strong id="c-service"></strong></div>
                 <div class="summary__row"><span>Fecha</span><strong id="c-date"></strong></div>
                 <div class="summary__row"><span>Hora</span><strong id="c-time"></strong></div>
               </div>
-              <button type="button" class="btn btn--white" id="newBooking">Agendar otra cita</button>
+              <button type="button" class="btn btn--pole" id="newBooking">Agendar otra cita</button>
             </section>
           </div>
-
-          <!-- Cartel LED derecho (azul/blanco) -->
-          <aside class="neon neon--blue" aria-hidden="true">
-            <svg class="ico neon__tube" aria-hidden="true"><use href="#i-pole"/></svg>
-            <span class="neon__word">AGENDA TU CITA</span>
-            <svg class="ico neon__tube" aria-hidden="true"><use href="#i-pole"/></svg>
-          </aside>
         </div>
       </div>
     </section>
@@ -204,283 +167,9 @@
 
   <div class="toast-wrap" id="toasts" aria-live="polite"></div>
 
-  <script>
-  (function () {
-    'use strict';
-
-    /* ---------- Datos compartidos con admin.html ---------- */
-    var STORAGE_KEY = 'barberia_citas_v1';
-
-    var SERVICES = [
-      { id: 'corte',  name: 'Corte clásico',      icon: 'scissors', price: 20, mins: 45 },
-      { id: 'navaja', name: 'Afeitado a navaja',  icon: 'razor', price: 15, mins: 30 },
-      { id: 'barba',  name: 'Barba y perfilado',  icon: 'mustache', price: 18, mins: 30 },
-      { id: 'combo',  name: 'Corte + Barba',      icon: 'pole', price: 32, mins: 75 },
-      { id: 'facial', name: 'Limpieza facial',    icon: 'bottle', price: 25, mins: 40 },
-      { id: 'vip',    name: 'Experiencia Royal',  icon: 'crown', price: 45, mins: 90 }
-    ];
-
-    // Franjas cada 30 min, de 9:00 a 18:30
-    var SLOTS = [];
-    for (var h = 9; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
-
-    var MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    var DOW = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function toISO(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
-    function fromISO(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
-    function longDate(iso) {
-      return fromISO(iso).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    }
-    function loadAppointments() {
-      try { var r = JSON.parse(localStorage.getItem(STORAGE_KEY)); return Array.isArray(r) ? r : []; }
-      catch (e) { return []; }
-    }
-    function saveAppointments(list) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; }
-      catch (e) { return false; }
-    }
-    function isTaken(date, time) {
-      return loadAppointments().some(function (a) { return a.status === 'active' && a.date === date && a.time === time; });
-    }
-
-    /* ---------- Estado ---------- */
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    var state = { service: null, date: null, time: null, viewY: today.getFullYear(), viewM: today.getMonth() };
-
-    var $ = function (id) { return document.getElementById(id); };
-
-    /* ---------- Navegación ---------- */
-    var toggle = $('navToggle'), links = $('navLinks');
-    toggle.addEventListener('click', function () {
-      var open = links.classList.toggle('is-open');
-      toggle.setAttribute('aria-expanded', open);
-    });
-    links.addEventListener('click', function (e) {
-      if (e.target.tagName === 'A') { links.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); }
-    });
-    $('heroCta').addEventListener('click', function () { $('agendar').scrollIntoView({ behavior: 'smooth' }); });
-    $('year').textContent = new Date().getFullYear();
-
-    /* ---------- Toast ---------- */
-    function toast(msg, type) {
-      var t = document.createElement('div');
-      t.className = 'toast' + (type ? ' toast--' + type : '');
-      t.textContent = msg;
-      $('toasts').appendChild(t);
-      setTimeout(function () { t.classList.add('is-leaving'); setTimeout(function () { t.remove(); }, 350); }, 3600);
-    }
-
-    /* ---------- Servicios ---------- */
-    function renderServices() {
-      var box = $('services'); box.innerHTML = '';
-      SERVICES.forEach(function (s) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'service'; b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', state.service === s.id);
-        if (state.service === s.id) b.classList.add('is-selected');
-        b.innerHTML = '<div class="service__icon" aria-hidden="true"><svg class="ico"><use href="#i-' + s.icon + '"/></svg></div>' +
-          '<div class="service__name"></div><div class="service__meta">' + s.mins + ' min</div>' +
-          '<span class="service__price">$' + s.price + '</span>';
-        b.querySelector('.service__name').textContent = s.name;
-        b.addEventListener('click', function () {
-          state.service = s.id; $('err-service').style.display = 'none';
-          renderServices(); updateSummary();
-        });
-        box.appendChild(b);
-      });
-    }
-
-    /* ---------- Calendario ---------- */
-    function renderCalendar() {
-      var grid = $('calGrid'); grid.innerHTML = '';
-      $('calTitle').textContent = MONTHS[state.viewM] + ' ' + state.viewY;
-      DOW.forEach(function (d) { var el = document.createElement('div'); el.className = 'cal__dow'; el.textContent = d; grid.appendChild(el); });
-
-      var first = new Date(state.viewY, state.viewM, 1);
-      var offset = (first.getDay() + 6) % 7;
-      var days = new Date(state.viewY, state.viewM + 1, 0).getDate();
-      for (var i = 0; i < offset; i++) grid.appendChild(document.createElement('div'));
-
-      var max = new Date(today); max.setMonth(max.getMonth() + 3);
-      for (var d = 1; d <= days; d++) {
-        var date = new Date(state.viewY, state.viewM, d);
-        var iso = toISO(date);
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'cal__day'; b.textContent = d;
-        b.setAttribute('aria-label', longDate(iso));
-        if (date < today || date > max || date.getDay() === 0) b.disabled = true; // pasado, >3 meses o domingo
-        if (+date === +today) b.classList.add('is-today');
-        if (state.date === iso) b.classList.add('is-selected');
-        b.addEventListener('click', (function (isoVal) { return function () {
-          state.date = isoVal; state.time = null; renderCalendar(); renderSlots(); updateSummary();
-        }; })(iso));
-        grid.appendChild(b);
-      }
-      var prevMonth = new Date(state.viewY, state.viewM - 1, 1);
-      var thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      $('calPrev').disabled = prevMonth < thisMonth;
-      $('calNext').disabled = new Date(state.viewY, state.viewM + 1, 1) > max;
-    }
-    $('calPrev').addEventListener('click', function () { state.viewM--; if (state.viewM < 0) { state.viewM = 11; state.viewY--; } renderCalendar(); });
-    $('calNext').addEventListener('click', function () { state.viewM++; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderCalendar(); });
-
-    /* ---------- Horas ---------- */
-    function renderSlots() {
-      var box = $('slots'), hint = $('slotsHint'); box.innerHTML = '';
-      if (!state.date) { hint.style.display = 'block'; hint.textContent = 'Primero selecciona un día en el calendario.'; return; }
-      hint.style.display = 'none';
-      var now = new Date(), isToday = state.date === toISO(now), available = 0;
-      SLOTS.forEach(function (t) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'slot'; b.textContent = t; b.setAttribute('role', 'radio');
-        var past = false;
-        if (isToday) { var p = t.split(':'); past = (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes()); }
-        var taken = isTaken(state.date, t);
-        if (past || taken) { b.disabled = true; b.title = taken ? 'Hora ocupada' : 'Hora pasada'; } else { available++; }
-        if (state.time === t) { b.classList.add('is-selected'); b.setAttribute('aria-checked', 'true'); }
-        b.addEventListener('click', function () { state.time = t; renderSlots(); updateSummary(); });
-        box.appendChild(b);
-      });
-      if (!available) { hint.style.display = 'block'; hint.textContent = 'No quedan horas libres este día. Prueba con otra fecha.'; }
-    }
-
-    /* ---------- Resumen ---------- */
-    function currentService() { return SERVICES.filter(function (s) { return s.id === state.service; })[0]; }
-    function updateSummary() {
-      var s = currentService();
-      $('sum-service').textContent = s ? s.name : '—';
-      $('sum-date').textContent = state.date ? longDate(state.date) : '—';
-      $('sum-time').textContent = state.time || '—';
-      $('sum-total').textContent = '$' + (s ? s.price : 0);
-      $('datetime').value = state.date && state.time ? longDate(state.date) + ' · ' + state.time : '';
-    }
-
-    /* ---------- Validación y envío ---------- */
-    function setError(fieldId, bad) { $(fieldId).classList.toggle('has-error', bad); return bad; }
-
-    $('bookingForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var name = $('name').value.trim().replace(/\s+/g, ' ');
-      var email = $('email').value.trim();
-      var badName = setError('f-name', name.split(' ').length < 2 || name.length < 5);
-      var badMail = setError('f-email', !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email));
-
-      if (!state.service) { $('err-service').style.display = 'block'; toast('Elige un servicio.', 'error'); $('services').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-      if (!state.date)    { toast('Selecciona un día en el calendario.', 'error'); return; }
-      if (!state.time)    { toast('Selecciona una hora disponible.', 'error'); return; }
-      if (badName || badMail) { toast('Revisa tus datos de contacto.', 'error'); return; }
-      if (isTaken(state.date, state.time)) { toast('Esa hora acaba de ser reservada. Elige otra.', 'error'); state.time = null; renderSlots(); updateSummary(); return; }
-
-      var s = currentService();
-      var appt = {
-        id: 'RB-' + Date.now().toString(36).toUpperCase().slice(-6),
-        name: name, email: email,
-        serviceId: s.id, service: s.name, price: s.price,
-        date: state.date, time: state.time,
-        status: 'active', createdAt: new Date().toISOString()
-      };
-      var list = loadAppointments(); list.push(appt);
-      if (!saveAppointments(list)) { toast('No se pudo guardar la cita. Revisa el almacenamiento del navegador.', 'error'); return; }
-
-      $('c-id').textContent = appt.id; $('c-name').textContent = appt.name;
-      $('c-service').textContent = appt.service + ' ($' + appt.price + ')';
-      $('c-date').textContent = longDate(appt.date); $('c-time').textContent = appt.time;
-      $('bookingForm').style.display = 'none';
-      var card = $('confirmCard'); card.classList.add('is-visible'); card.focus();
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      toast('Cita guardada correctamente.', 'ok');
-    });
-
-    $('newBooking').addEventListener('click', function () {
-      state.service = null; state.date = null; state.time = null;
-      $('name').value = ''; $('email').value = '';
-      $('confirmCard').classList.remove('is-visible');
-      $('bookingForm').style.display = '';
-      renderServices(); renderCalendar(); renderSlots(); updateSummary();
-      $('agendar').scrollIntoView({ behavior: 'smooth' });
-    });
-    ['name', 'email'].forEach(function (id) { $(id).addEventListener('input', function () { $('f-' + id).classList.remove('has-error'); }); });
-
-    /* ---------- Banner LED: letras circulando como un tren ---------- */
-    (function () {
-      var panel = $('ledPanel'), stage = $('ledStage');
-      if (!panel || !stage) return;
-      var SEGS = [['MARTES DE OFERTA', 'red'], [' • ', 'dim'], ['AGENDA TU CITA Y RECIBE TU ', 'white'], ['CAFÉ', 'blue'], [' LUEGO DE TU VISITA', 'white'], [' • ', 'dim']];
-      var base = [];
-      SEGS.forEach(function (s) { s[0].split('').forEach(function (ch) { base.push({ ch: ch, c: s[1] }); }); });
-      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var chars = [], perim = 0, spacing = 0, L = 0, r = 0, vertical = false, cx = 0, cy = 0;
-      var offset = 0, last = 0, running = false, visible = true, lastW = 0, SPEED = 90;
-
-      function build() {
-        stage.innerHTML = ''; chars = [];
-        var W = panel.clientWidth; lastW = W;
-        vertical = W < 620;                       // en móvil el circuito se vuelve vertical
-        var H = vertical ? 460 : 250, pad = 38;
-        stage.style.height = H + 'px';
-        if (vertical) { r = (W - 2 * pad) / 2; L = H - 2 * pad - 2 * r; }
-        else { r = (H - 2 * pad) / 2; L = W - 2 * pad - 2 * r; }
-        if (L < 0) L = 0;
-        perim = 2 * L + 2 * Math.PI * r;
-        cx = W / 2; cy = H / 2;
-        var target = vertical ? 16 : 22, k = 1, best = Infinity;
-        for (var n = 1; n <= 5; n++) { var d = Math.abs(perim / (n * base.length) - target); if (d < best) { best = d; k = n; } }
-        var total = k * base.length; spacing = perim / total;
-        var fs = Math.max(12, Math.min(34, spacing * 1.5));
-        for (var i = 0; i < total; i++) {
-          var item = base[i % base.length]; if (item.ch === ' ') continue;
-          var el = document.createElement('span');
-          el.className = 'led__char led__char--' + item.c; el.textContent = item.ch; el.style.fontSize = fs + 'px';
-          stage.appendChild(el); chars.push({ el: el, i: i });
-        }
-        draw();
-      }
-
-      // Posición sobre una pista en forma de óvalo (recta + semicírculo + recta + semicírculo), sentido horario
-      function place(s) {
-        var arc = Math.PI * r, x, y, a, t, g;
-        if (s < L) { x = -L / 2 + s; y = -r; a = 0; }
-        else if (s < L + arc) { t = (s - L) / r; g = -Math.PI / 2 + t; x = L / 2 + r * Math.cos(g); y = r * Math.sin(g); a = g + Math.PI / 2; }
-        else if (s < 2 * L + arc) { x = L / 2 - (s - L - arc); y = r; a = Math.PI; }
-        else { t = (s - 2 * L - arc) / r; g = Math.PI / 2 + t; x = -L / 2 + r * Math.cos(g); y = r * Math.sin(g); a = g + Math.PI / 2; }
-        if (vertical) { var nx = -y; y = x; x = nx; a += Math.PI / 2; }
-        return [x, y, a];
-      }
-      function draw() {
-        chars.forEach(function (c) {
-          var p = place((c.i * spacing + offset) % perim);
-          c.el.style.transform = 'translate(' + (cx + p[0]).toFixed(1) + 'px,' + (cy + p[1]).toFixed(1) + 'px) translate(-50%,-50%) rotate(' + p[2].toFixed(3) + 'rad)';
-        });
-      }
-      function frame(ts) {
-        if (!running) return;
-        if (!last) last = ts;
-        offset = (offset + SPEED * Math.min((ts - last) / 1000, 0.1)) % perim; last = ts;
-        draw(); requestAnimationFrame(frame);
-      }
-      function start() { if (!running && visible && !reduce) { running = true; last = 0; requestAnimationFrame(frame); } }
-      function stop() { running = false; }
-
-      build(); start();
-      if ('IntersectionObserver' in window) {
-        new IntersectionObserver(function (en) { visible = en[0].isIntersecting; visible ? start() : stop(); }).observe(panel);
-      }
-      var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (panel.clientWidth !== lastW) build(); }, 150); });
-    })();
-
-    // Sincroniza si el panel admin cambia citas en otra pestaña
-    window.addEventListener('storage', function (e) { if (e.key === STORAGE_KEY) renderSlots(); });
-
-    renderServices(); renderCalendar(); renderSlots(); updateSummary();
-  })();
-  </script>
-
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/conexion.js"></script>
-    <script src="js/main.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/conexion.js"></script>
+  <!-- Enlace al archivo de script externo -->
+  <script src="script/index.js"></script>
 </body>
 </html>
