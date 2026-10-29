@@ -20,7 +20,7 @@
       return fetch(API + url, { 
         method: method, 
         headers: { 'Content-Type': 'application/json' }, 
-        body: body ? JSON.stringify(http://localhost:3000/admin.htmlbody) : undefined 
+        body: body ? JSON.stringify(body) : undefined 
       })
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (d) {
@@ -227,3 +227,26 @@
   
     setInterval(refresh, 10000);
   })();
+
+
+// ESTO ES LO DEL FORMULARIO DE CREACION DE UN NUEVO BARBERO 
+// ---------------------------------------------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+  const toggleBtn = document.getElementById('toggleBarberFormBtn');
+  const cancelBtn = document.getElementById('cancelBarberBtn');
+  const dropdown = document.getElementById('newBarberDropdown');
+
+  if (toggleBtn && dropdown) {
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = dropdown.style.display === 'none';
+      dropdown.style.display = isHidden ? 'block' : 'none';
+    });
+  }
+
+  if (cancelBtn && dropdown) {
+    cancelBtn.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+    });
+  }
+});
