@@ -1,5 +1,19 @@
 {
   "esquema": 1,
-  "actualizado": null,
-  "citas": []
+  "actualizado": "2026-10-29T22:48:29.510Z",
+  "citas": [
+    {
+      "id": "RB-5A91C1",
+      "name": "Ana Perez",
+      "email": "a@b.co",
+      "serviceId": "corte",
+      "service": "Corte",
+      "price": 20,
+      "date": "2026-11-02",
+      "time": "10:00",
+      "status": "cancelled",
+      "createdAt": "2026-10-29T22:48:29.413Z",
+      "updatedAt": "2026-10-29T22:48:29.510Z"
+    }
+  ]
 }

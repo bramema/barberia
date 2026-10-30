@@ -1004,3 +1004,37 @@
   .lcard :is(#adminLoginForm, #loginForm) { padding-top: 6px; }
   .lcard__links { right: 50%; transform: translateX(50%); }
 }
+/* 4. Horarios (panel admin y vista barbero) */
+.horarios { display: grid; gap: 22px; margin: 26px 0 50px; }
+.horarios .panel + .panel { margin-top: 0; }
+@media (min-width: 960px) { .horarios { grid-template-columns: 1fr 1.25fr; align-items: start; } }
+
+.horario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.field__label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: #d9d9dc; }
+
+.dias { display: flex; flex-wrap: wrap; gap: 8px; }
+.dia { position: relative; cursor: pointer; }
+.dia input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.dia span {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 8px 10px;
+  border-radius: 999px; border: 1px solid var(--line-strong); font-size: 0.82rem; font-weight: 600;
+  color: var(--muted); transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.dia:hover span { background: rgba(255, 255, 255, 0.08); }
+.dia input:checked + span { background: var(--white); color: #111; border-color: var(--white); }
+.dia input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.horario-resumen { margin-top: 14px; font-size: 0.86rem; color: var(--muted); }
+.horario-resumen.is-warn { color: #f5b74e; }
+.horario-resumen.is-error { color: var(--red); }
+.horario-nota { color: var(--muted); font-size: 0.86rem; margin: -6px 0 6px; }
+.horario-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+.barbero-horario { padding-top: 18px; margin-top: 18px; border-top: 1px solid var(--line); }
+.barbero-horario:first-child { border-top: 0; margin-top: 4px; padding-top: 4px; }
+.barbero-horario__head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.barbero-horario__name { font-size: 1.05rem; }
+.barbero-horario__user { color: var(--muted); font-size: 0.82rem; }
+
+.mi-horario { margin-top: 10px; color: var(--muted); }
+.mi-horario strong { color: var(--white); }

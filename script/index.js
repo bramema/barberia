@@ -125,8 +125,9 @@
       { id: 'vip',    name: 'Experiencia Royal',  icon: 'crown', price: 45, mins: 90 }
     ];
   
-    var SLOTS = [];
-    for (var h = 9; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
+    /* Horario de la barbería y de los barberos (lo define el admin) */
+    var cfg = JSON.parse(JSON.stringify(Horario.DEFAULT));
+    function turnos(iso) { return Horario.turnosDelDia(cfg, fromISO(iso).getDay()); }
   
     var MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     var DOW = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
@@ -148,13 +149,26 @@
         });
     }
     function refreshOccupied() {
-      return request('GET', '/ocupadas').then(function (rows) {
+      return Promise.all([request('GET', '/config'), request('GET', '/ocupadas')]).then(function (r) {
         offlineWarned = false;
-        occupied = rows.map(function (r) { return { status: 'active', date: r.date, time: r.time }; });
+        applyConfig(r[0]);
+        occupied = r[1].map(function (x) { return { status: 'active', date: x.date, time: x.time }; });
         renderSlots();
       }).catch(function () {
         if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con el servidor.', 'error'); }
       });
+    }
+    function applyConfig(nuevo) {
+      var cambio = JSON.stringify(nuevo) !== JSON.stringify(cfg);
+      cfg = nuevo;
+      var h = cfg.horario, dias = Horario.textoDias(h.dias.filter(function (d) { return Horario.diaAbierto(cfg, d); })), horas = Horario.bonita(h.apertura) + ' – ' + Horario.bonita(h.cierre);
+      if ($('horarioTexto')) $('horarioTexto').textContent = 'Elige servicio, día y hora. Atendemos ' + dias + ', de ' + Horario.textoRango(h.apertura, h.cierre) + '.';
+      if ($('footerHorario')) $('footerHorario').textContent = dias.replace(/^de /, '').replace(/^./, function (c) { return c.toUpperCase(); }) + ', ' + horas;
+      if (!cambio) return;
+      // Si el admin cambió el horario y lo elegido ya no es válido, se limpia la selección
+      if (state.date && !Horario.diaAbierto(cfg, fromISO(state.date).getDay())) { state.date = null; state.time = null; }
+      if (state.date && state.time && turnos(state.date).indexOf(state.time) === -1) state.time = null;
+      renderCalendar(); updateSummary();
     }
     function saveAppointments(appt) {
       $('submitBtn').disabled = true;
@@ -230,7 +244,7 @@
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'cal__day'; b.textContent = d;
         b.setAttribute('aria-label', longDate(iso));
-        if (date < today || date > max || date.getDay() === 0) b.disabled = true;
+        if (date < today || date > max || !Horario.diaAbierto(cfg, date.getDay())) b.disabled = true;
         if (+date === +today) b.classList.add('is-today');
         if (state.date === iso) b.classList.add('is-selected');
         b.addEventListener('click', (function (isoVal) { return function () {
@@ -251,7 +265,7 @@
       if (!state.date) { hint.style.display = 'block'; hint.textContent = 'Primero selecciona un día en el calendario.'; return; }
       hint.style.display = 'none';
       var now = new Date(), isToday = state.date === toISO(now), available = 0;
-      SLOTS.forEach(function (t) {
+      turnos(state.date).forEach(function (t) {
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'slot'; b.textContent = t; b.setAttribute('role', 'radio');
         var past = false;

@@ -101,6 +101,22 @@
       $('barberNameText').textContent = currentUser ? currentUser.name : 'Barbero';
   
       fetchBarberSchedule();
+      showMyHours();
+    }
+
+    // Muestra el horario de trabajo que el admin definió para este barbero
+    function showMyHours() {
+      request('GET', '/config').then(function (cfg) {
+        var me = cfg.barberos.filter(function (b) { return currentUser && b.usuario === currentUser.username; })[0];
+        var el = $('miHorario'); if (!el) return;
+        el.textContent = '';
+        if (!me) return;
+        var lbl = document.createElement('span'); lbl.textContent = 'Tu horario: ';
+        var val = document.createElement('strong');
+        val.textContent = me.dias.length ? Horario.textoDias(me.dias) + ', de ' + Horario.textoRango(me.inicio, me.fin) : 'sin días asignados';
+        el.appendChild(lbl); el.appendChild(val);
+        el.appendChild(document.createTextNode(' · Barbería: ' + Horario.textoRango(cfg.horario.apertura, cfg.horario.cierre)));
+      }).catch(function () {});
     }
   
     // Cierre de Sesión

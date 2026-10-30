@@ -127,6 +127,39 @@
         <p>Gestiona las citas agendadas conectadas directamente a la base de datos.</p>
       </div>
 
+      <!-- Horarios: barbería y barberos -->
+      <section class="horarios" aria-label="Horarios">
+        <div class="panel">
+          <h3 class="panel__title"><span class="step">1</span> Horario de la barbería</h3>
+          <form id="shopHoursForm" novalidate>
+            <div class="horario-grid">
+              <div class="field">
+                <label for="shopOpen">Abre a las</label>
+                <select id="shopOpen"></select>
+              </div>
+              <div class="field">
+                <label for="shopClose">Cierra a las</label>
+                <select id="shopClose"></select>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field__label">Días de atención</span>
+              <div class="dias" id="shopDays" role="group" aria-label="Días de atención"></div>
+            </div>
+            <p class="horario-resumen" id="shopSummary"></p>
+            <div class="horario-actions">
+              <button type="submit" class="btn btn--blue btn--sm">Guardar horario</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel__title"><span class="step">2</span> Horario de los barberos</h3>
+          <p class="horario-nota">Cada barbero solo recibe citas en sus días y horas de trabajo, y siempre dentro del horario de la barbería.</p>
+          <div id="barberHours"></div>
+        </div>
+      </section>
+
       <div class="led-frame" id="ledFrame" style="margin-bottom:70px">
         <div class="led-frame__stage" id="ledStage" aria-hidden="true"></div>
         <div class="led-frame__ring led-frame__ring--a" aria-hidden="true"></div>
@@ -227,6 +260,7 @@
   <div class="toast-wrap" id="toasts" aria-live="polite"></div>
 
   <!-- Scripts -->
+  <script src="script/horario.js"></script>
   <script src="script/admin.js"></script>
   <script src="server.js"></script>
 

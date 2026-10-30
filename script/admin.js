@@ -7,8 +7,7 @@
   
     var API = '/api';
     var cache = [], offlineWarned = false;
-    var SLOTS = [];
-    for (var h = 9; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
+    var cfg = JSON.parse(JSON.stringify(Horario.DEFAULT)); // horario actual (se carga del servidor)
   
     function pad(n) { return String(n).padStart(2, '0'); }
     function toISO(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -55,6 +54,7 @@
             $('adminMainPanel').style.display = 'block';
             $('logoutBtn').style.display = 'inline-flex';
             $('adminGreeting').style.display = 'inline-block';
+            loadConfig();
             refresh();
           })
           .catch(function (err) {
@@ -160,8 +160,10 @@
       var sel = $('newTime'); sel.innerHTML = '';
       var list = load(), now = new Date(), isToday = dateISO === toISO(now), n = 0;
       var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Selecciona una hora'; sel.appendChild(ph);
-      SLOTS.forEach(function (t) {
-        var taken = list.some(function (x) { return x.id !== editingId && x.status === 'active' && x.date === dateISO && x.time === t; });
+      var dia = fromISO(dateISO).getDay();
+      Horario.turnosDelDia(cfg, dia).forEach(function (t) {
+        var usadas = list.filter(function (x) { return x.id !== editingId && x.status === 'active' && x.date === dateISO && x.time === t; }).length;
+        var taken = usadas >= Horario.capacidad(cfg, dia, t);
         var p = t.split(':'), past = isToday && (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes());
         if (taken || past) return;
         var o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); n++;
@@ -173,7 +175,7 @@
     function validDate(v) {
       if (!v) return false;
       var d = fromISO(v); var t = new Date(); t.setHours(0, 0, 0, 0);
-      return !isNaN(d) && d >= t && d.getDay() !== 0;
+      return !isNaN(d) && d >= t && Horario.diaAbierto(cfg, d.getDay());
     }
   
     function openModal(id) {
@@ -208,8 +210,8 @@
         var okT = !!t; $('f-time').classList.toggle('has-error', !okT);
         if (!okD || !okT) return;
   
-        var list = load();
-        var clash = list.some(function (x) { return x.id !== editingId && x.status === 'active' && x.date === d && x.time === t; });
+        var list = load(), dia = fromISO(d).getDay();
+        var clash = list.filter(function (x) { return x.id !== editingId && x.status === 'active' && x.date === d && x.time === t; }).length >= Horario.capacidad(cfg, dia, t);
         if (clash) { toast('Esa hora ya está ocupada.', 'error'); fillTimes(d); return; }
         var a = list.filter(function (x) { return x.id === editingId; })[0]; if (!a) return;
         send('PATCH', '/citas/' + encodeURIComponent(a.id), { date: d, time: t })
@@ -218,6 +220,130 @@
       });
     }
   
+    /* =========================================================
+       HORARIOS — barbería y barberos
+       ========================================================= */
+    function loadConfig() {
+      return send('GET', '/config').then(function (c) { cfg = c; renderHorarios(); })
+        .catch(function () { toast('No se pudo cargar el horario.', 'error'); });
+    }
+
+    function fillHours(sel, value) {
+      sel.innerHTML = '';
+      Horario.opcionesHora().forEach(function (t) {
+        var o = document.createElement('option'); o.value = t; o.textContent = Horario.bonita(t); sel.appendChild(o);
+      });
+      sel.value = value;
+    }
+
+    // Casillas de días (Lu, Ma, ... Do) con la semana empezando el lunes
+    function buildDays(box, selected, name) {
+      box.innerHTML = '';
+      Horario.ORDEN_SEMANA.forEach(function (d) {
+        var lbl = document.createElement('label'); lbl.className = 'dia'; lbl.title = Horario.DIAS[d];
+        var inp = document.createElement('input'); inp.type = 'checkbox'; inp.name = name; inp.value = d;
+        inp.checked = selected.indexOf(d) !== -1;
+        var sp = document.createElement('span'); sp.textContent = Horario.DIAS_CORTOS[d];
+        lbl.appendChild(inp); lbl.appendChild(sp); box.appendChild(lbl);
+      });
+    }
+    function readDays(box) {
+      return Array.prototype.filter.call(box.querySelectorAll('input[type=checkbox]'), function (i) { return i.checked; })
+        .map(function (i) { return +i.value; });
+    }
+
+    function shopSummary() {
+      var dias = readDays($('shopDays')), a = $('shopOpen').value, c = $('shopClose').value;
+      var err = Horario.validarRango(a, c, dias);
+      $('shopSummary').textContent = err ? err : 'Atiende ' + Horario.textoDias(dias) + ', de ' + Horario.textoRango(a, c) + '.';
+      $('shopSummary').classList.toggle('is-error', !!err || !dias.length);
+      if (!err && !dias.length) $('shopSummary').textContent = 'Elige al menos un día de atención.';
+    }
+
+    function barberSummary(b) {
+      var h = cfg.horario;
+      // Horas reales en que el barbero puede atender (cruce con el horario de la barbería)
+      var desde = Math.max(Horario.aMin(b.inicio), Horario.aMin(h.apertura));
+      var hasta = Math.min(Horario.aMin(b.fin), Horario.aMin(h.cierre));
+      var dias = b.dias.filter(function (d) { return h.dias.indexOf(d) !== -1; });
+      if (!b.dias.length) return { txt: 'No trabaja ningún día.', warn: true };
+      if (hasta <= desde || !dias.length) return { txt: 'Su horario no coincide con el de la barbería: no recibirá citas.', warn: true };
+      var txt = 'Trabaja ' + Horario.textoDias(b.dias) + ', de ' + Horario.textoRango(b.inicio, b.fin) + '.';
+      var warn = dias.length < b.dias.length || desde > Horario.aMin(b.inicio) || hasta < Horario.aMin(b.fin);
+      if (warn) txt += ' Solo recibirá citas cuando la barbería esté abierta.';
+      return { txt: txt, warn: warn };
+    }
+
+    function renderHorarios() {
+      if (!$('shopHoursForm')) return;
+      fillHours($('shopOpen'), cfg.horario.apertura);
+      fillHours($('shopClose'), cfg.horario.cierre);
+      buildDays($('shopDays'), cfg.horario.dias, 'shopDay');
+      shopSummary();
+
+      var box = $('barberHours'); box.innerHTML = '';
+      cfg.barberos.forEach(function (b) {
+        var card = document.createElement('form'); card.className = 'barbero-horario'; card.noValidate = true;
+        card.innerHTML =
+          '<div class="barbero-horario__head"><strong class="barbero-horario__name"></strong><span class="barbero-horario__user"></span></div>' +
+          '<div class="horario-grid">' +
+            '<div class="field"><label>Entrada</label><select class="b-inicio"></select></div>' +
+            '<div class="field"><label>Salida</label><select class="b-fin"></select></div>' +
+          '</div>' +
+          '<div class="field"><span class="field__label">Días de trabajo</span><div class="dias b-dias" role="group"></div></div>' +
+          '<p class="horario-resumen b-resumen"></p>' +
+          '<div class="horario-actions"><button type="submit" class="btn btn--blue btn--sm">Guardar horario de <span class="b-nom"></span></button></div>';
+        card.querySelector('.barbero-horario__name').textContent = b.nombre;
+        card.querySelector('.barbero-horario__user').textContent = '@' + b.usuario;
+        card.querySelector('.b-nom').textContent = b.nombre;
+        card.querySelector('.b-dias').setAttribute('aria-label', 'Días de trabajo de ' + b.nombre);
+        var ini = card.querySelector('.b-inicio'), fin = card.querySelector('.b-fin'), dias = card.querySelector('.b-dias');
+        ini.id = 'bIni-' + b.usuario; fin.id = 'bFin-' + b.usuario;
+        ini.previousSibling.htmlFor = ini.id; fin.previousSibling.htmlFor = fin.id;
+        fillHours(ini, b.inicio); fillHours(fin, b.fin);
+        buildDays(dias, b.dias, 'dias-' + b.usuario);
+
+        function preview() {
+          var p = { inicio: ini.value, fin: fin.value, dias: readDays(dias) };
+          var err = Horario.validarRango(p.inicio, p.fin, p.dias);
+          var r = err ? { txt: err, warn: true } : barberSummary(p);
+          var el = card.querySelector('.b-resumen'); el.textContent = r.txt;
+          el.classList.toggle('is-error', !!err); el.classList.toggle('is-warn', !err && r.warn);
+        }
+        card.addEventListener('change', preview);
+        preview();
+
+        card.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var p = { inicio: ini.value, fin: fin.value, dias: readDays(dias) };
+          var err = Horario.validarRango(p.inicio, p.fin, p.dias);
+          if (err) { toast(err, 'error'); return; }
+          send('PUT', '/barberos/' + encodeURIComponent(b.usuario) + '/horario', p)
+            .then(function (r) { cfg = r.config; savedMsg('Horario de ' + b.nombre + ' guardado.', r.fueraDeHorario); renderHorarios(); refresh(); })
+            .catch(function (e2) { toast(e2.message, 'error'); });
+        });
+        box.appendChild(card);
+      });
+    }
+
+    function savedMsg(msg, fuera) {
+      toast(msg, 'ok');
+      if (fuera) toast('Atención: ' + fuera + (fuera === 1 ? ' cita activa queda' : ' citas activas quedan') + (fuera === 1 ? ' fuera del nuevo horario. Reagéndala o cancélala.' : ' fuera del nuevo horario. Reagéndalas o cancélalas.'), 'error');
+    }
+
+    if ($('shopHoursForm')) {
+      $('shopHoursForm').addEventListener('change', shopSummary);
+      $('shopHoursForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var p = { apertura: $('shopOpen').value, cierre: $('shopClose').value, dias: readDays($('shopDays')) };
+        var err = Horario.validarRango(p.apertura, p.cierre, p.dias) || (!p.dias.length && 'Elige al menos un día de atención.');
+        if (err) { toast(err, 'error'); return; }
+        send('PUT', '/config/horario', p)
+          .then(function (r) { cfg = r.config; savedMsg('Horario de la barbería guardado.', r.fueraDeHorario); renderHorarios(); refresh(); })
+          .catch(function (e2) { toast(e2.message, 'error'); });
+      });
+    }
+
     document.querySelectorAll('.chip').forEach(function (c) {
       c.addEventListener('click', function () {
         document.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('is-active'); });
