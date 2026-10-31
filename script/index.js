@@ -117,6 +117,8 @@
 
     // Los servicios vienen de la tabla "servicios" de Supabase
     var SERVICES = [];
+    // Los barberos vienen de Supabase (función barberos_publicos)
+    var BARBERS = [];
     var SERVICE_ICONS = {
       'Corte clásico': 'scissors', 'Corte degradado': 'comb', 'Arreglo de barba': 'mustache',
       'Corte y barba': 'pole', 'Afeitado clásico': 'razor'
@@ -151,10 +153,20 @@
         })
         .catch(function () { toast('No se pudieron cargar los servicios.', 'error'); });
     }
+    function loadBarbers() {
+      return db.rpc('barberos_publicos')
+        .then(unwrap)
+        .then(function (rows) {
+          BARBERS = rows.map(function (r) { return { id: r.id, name: r.nombre }; });
+          if (!BARBERS.length) toast('No hay barberos disponibles.', 'error');
+          renderBarbers();
+        })
+        .catch(function () { toast('No se pudieron cargar los barberos.', 'error'); });
+    }
     function refreshOccupied() {
       return db.rpc('horas_ocupadas').then(unwrap).then(function (rows) {
         offlineWarned = false;
-        occupied = rows.map(function (r) { return { status: 'active', date: r.fecha, time: r.hora_inicio.slice(0, 5) }; });
+        occupied = rows.map(function (r) { return { status: 'active', date: r.fecha, time: r.hora_inicio.slice(0, 5), barberId: r.barbero_id == null ? null : r.barbero_id }; });
         renderSlots();
       }).catch(function () {
         if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con la base de datos.', 'error'); }
@@ -163,17 +175,22 @@
     function saveAppointments(appt) {
       $('submitBtn').disabled = true;
       return db.rpc('agendar_cita', {
-        p_nombre: appt.name, p_email: appt.email, p_servicio_id: appt.serviceId, p_fecha: appt.date, p_hora: appt.time
+        p_nombre: appt.name, p_email: appt.email, p_servicio_id: appt.serviceId, p_fecha: appt.date, p_hora: appt.time,
+        p_barbero_id: appt.barberId
       }).then(unwrap).then(
         function (id) { $('submitBtn').disabled = false; return { id: id }; },
         function (e) { $('submitBtn').disabled = false; throw e; });
     }
     function isTaken(date, time) {
-      return loadAppointments().some(function (a) { return a.status === 'active' && a.date === date && a.time === time; });
+      // Una hora está ocupada si ese mismo barbero la tiene; las citas viejas sin barbero bloquean la hora para todos
+      return loadAppointments().some(function (a) {
+        return a.status === 'active' && a.date === date && a.time === time &&
+          (a.barberId == null || a.barberId === state.barber);
+      });
     }
   
     var today = new Date(); today.setHours(0, 0, 0, 0);
-    var state = { service: null, date: null, time: null, viewY: today.getFullYear(), viewM: today.getMonth() };
+    var state = { service: null, barber: null, date: null, time: null, viewY: today.getFullYear(), viewM: today.getMonth() };
   
     var $ = function (id) { return document.getElementById(id); };
   
@@ -219,6 +236,24 @@
       });
     }
   
+    function renderBarbers() {
+      var box = $('barbers'); if (!box) return; box.innerHTML = '';
+      BARBERS.forEach(function (br) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'service'; b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', state.barber === br.id);
+        if (state.barber === br.id) b.classList.add('is-selected');
+        b.innerHTML = '<div class="service__icon" aria-hidden="true">' + ICONS.scissors + '</div>' +
+          '<div class="service__name"></div><div class="service__meta">Barbero</div>';
+        b.querySelector('.service__name').textContent = br.name;
+        b.addEventListener('click', function () {
+          state.barber = br.id; state.time = null; $('err-barber').style.display = 'none';
+          renderBarbers(); renderSlots(); updateSummary();
+        });
+        box.appendChild(b);
+      });
+    }
+
     function renderCalendar() {
       var grid = $('calGrid'); if (!grid) return; grid.innerHTML = '';
       $('calTitle').textContent = MONTHS[state.viewM] + ' ' + state.viewY;
@@ -255,6 +290,7 @@
     function renderSlots() {
       var box = $('slots'), hint = $('slotsHint'); if (!box) return; box.innerHTML = '';
       if (!state.date) { hint.style.display = 'block'; hint.textContent = 'Primero selecciona un día en el calendario.'; return; }
+      if (!state.barber) { hint.style.display = 'block'; hint.textContent = 'Primero elige un barbero.'; return; }
       hint.style.display = 'none';
       var now = new Date(), isToday = state.date === toISO(now), available = 0;
       SLOTS.forEach(function (t) {
@@ -272,9 +308,12 @@
     }
   
     function currentService() { return SERVICES.filter(function (s) { return s.id === state.service; })[0]; }
+    function currentBarber() { return BARBERS.filter(function (br) { return br.id === state.barber; })[0]; }
     function updateSummary() {
       var s = currentService();
+      var br = currentBarber();
       if ($('sum-service')) $('sum-service').textContent = s ? s.name : '—';
+      if ($('sum-barber')) $('sum-barber').textContent = br ? br.name : '—';
       if ($('sum-date')) $('sum-date').textContent = state.date ? longDate(state.date) : '—';
       if ($('sum-time')) $('sum-time').textContent = state.time || '—';
       if ($('sum-total')) $('sum-total').textContent = money(s ? s.price : 0);
@@ -293,16 +332,19 @@
         var badMail = setError('f-email', !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email));
   
         if (!state.service) { $('err-service').style.display = 'block'; toast('Elige un servicio.', 'error'); $('services').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        if (!state.barber)  { $('err-barber').style.display = 'block'; toast('Elige un barbero.', 'error'); $('barbers').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (!state.date)    { toast('Selecciona un día en el calendario.', 'error'); return; }
         if (!state.time)    { toast('Selecciona una hora disponible.', 'error'); return; }
         if (badName || badMail) { toast('Revisa tus datos de contacto.', 'error'); return; }
         if (isTaken(state.date, state.time)) { toast('Esa hora acaba de ser reservada.', 'error'); state.time = null; renderSlots(); updateSummary(); return; }
   
         var s = currentService();
+        var br = currentBarber();
         var appt = {
           id: 'RB-' + Date.now().toString(36).toUpperCase().slice(-6),
           name: name, email: email,
           serviceId: s.id, service: s.name, price: s.price,
+          barberId: br.id, barber: br.name,
           date: state.date, time: state.time,
           status: 'active', createdAt: new Date().toISOString()
         };
@@ -310,6 +352,7 @@
           appt.id = 'RB-' + created.id;
           $('c-id').textContent = appt.id; $('c-name').textContent = appt.name;
           $('c-service').textContent = appt.service + ' (' + money(appt.price) + ')';
+          if ($('c-barber')) $('c-barber').textContent = appt.barber;
           $('c-date').textContent = longDate(appt.date); $('c-time').textContent = appt.time;
           $('bookingForm').style.display = 'none';
           var card = $('confirmCard'); card.classList.add('is-visible'); card.focus();
@@ -326,11 +369,11 @@
   
     if ($('newBooking')) {
       $('newBooking').addEventListener('click', function () {
-        state.service = null; state.date = null; state.time = null;
+        state.service = null; state.barber = null; state.date = null; state.time = null;
         $('name').value = ''; $('email').value = '';
         $('confirmCard').classList.remove('is-visible');
         $('bookingForm').style.display = '';
-        renderServices(); renderCalendar(); renderSlots(); updateSummary();
+        renderServices(); renderBarbers(); renderCalendar(); renderSlots(); updateSummary();
         $('agendar').scrollIntoView({ behavior: 'smooth' });
       });
     }
@@ -351,5 +394,6 @@
   
     renderServices(); renderCalendar(); renderSlots(); updateSummary();
     loadServices();
+    loadBarbers();
     refreshOccupied();
   })();
