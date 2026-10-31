@@ -933,7 +933,7 @@
 .lcircle--admin { background: #1E88E5; }
 .lcircle[aria-current="page"] { box-shadow: 0 0 0 3px #fafafa, 0 0 0 6px var(--acc), 0 8px 16px rgba(0, 0, 0, 0.3); }
 
-/* 3. Formulario Desplegable para Crear Nuevo Barbero */
+/* 3. Gestión de barberos (modal CRUD del panel admin) */
 .admin-actions-group {
   display: flex;
   gap: 10px;
@@ -941,57 +941,59 @@
   flex-wrap: wrap;
 }
 
-.barber-dropdown-form {
-  background: rgba(18, 18, 18, 0.95);
-  border: 1px solid var(--line-strong);
+.modal__box--wide { width: min(760px, 100%); }
+
+.barber-form {
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: var(--shadow);
-  animation: dropdown-fade 0.35s var(--ease) both;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-@keyframes dropdown-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.barber-dropdown-form h3 {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  margin-bottom: 4px;
+.barber-form h4 {
+  font-size: 1rem;
+  margin-bottom: 14px;
   color: var(--white);
 }
 
-.barber-dropdown-form .form-hint {
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-bottom: 18px;
-}
-
-.barber-dropdown-form .fields-grid {
+.barber-form .fields-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 @media (min-width: 600px) {
-  .barber-dropdown-form .fields-grid {
+  .barber-form .fields-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-.barber-dropdown-form .form-actions {
+.horario-edit { margin-bottom: 14px; }
+.horario-row { display: grid; grid-template-columns: 56px 1fr auto 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
+.horario-row__sep { color: var(--muted); font-size: 0.82rem; }
+.horario-row select {
+  width: 100%; padding: 9px 10px; border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-strong); color: var(--white);
+}
+.horario-row select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.25); }
+.horario-row select:disabled { opacity: 0.35; }
+.horario-row select option { background: #1a1a1a; }
+.horario-edit.has-error .field__error { display: block; }
+.cell-horario { font-size: 0.8rem; color: var(--muted); }
+.modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.barber-form .form-note { color: var(--muted); font-size: 0.85rem; margin: -6px 0 14px; }
+.badge--pending { background: rgba(245, 183, 78, 0.16); color: #f5c46e; border: 1px solid rgba(245, 183, 78, 0.5); }
+
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 0.86rem; color: #d9d9dc; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--blue); }
+
+.barber-form .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  margin-top: 14px;
 }
 
 /* Adaptación responsive */

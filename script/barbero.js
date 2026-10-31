@@ -94,7 +94,9 @@
           return loadPerfil(data.user).then(function (perfil) {
             if (!isStaff(perfil)) {
               db.auth.signOut();
-              throw new Error('Esta cuenta no tiene acceso al panel de barbero.');
+              throw new Error(perfil && perfil.rol === 'barbero'
+                ? 'Tu cuenta no está enlazada a ningún barbero. Pide al administrador que la configure.'
+                : 'Esta cuenta no tiene acceso al panel de barbero.');
             }
             setUser(data.user, perfil);
           });
@@ -108,17 +110,21 @@
         });
     });
 
-    // Rol del usuario guardado en la tabla "perfiles": admin o barbero
+    // Rol del usuario guardado en la tabla "perfiles": admin o barbero (enlazado con barbero_id)
     function loadPerfil(user) {
-      return db.from('perfiles').select('nombre, rol').eq('id', user.id).maybeSingle().then(unwrap);
+      return db.from('perfiles').select('nombre, rol, barbero_id').eq('id', user.id).maybeSingle().then(unwrap);
     }
 
+    // Un barbero solo entra si su cuenta está enlazada a un barbero; el admin entra y ve todas las citas
     function isStaff(perfil) {
-      return !!perfil && (perfil.rol === 'barbero' || perfil.rol === 'admin');
+      return !!perfil && ((perfil.rol === 'barbero' && perfil.barbero_id != null) || perfil.rol === 'admin');
     }
 
     function setUser(user, perfil) {
-      currentUser = { id: user.id, name: perfil.nombre || user.email };
+      currentUser = {
+        id: user.id, name: perfil.nombre || user.email,
+        barberoId: perfil.rol === 'barbero' ? perfil.barbero_id : null
+      };
     }
 
     // Si ya había una sesión abierta, entra directo
@@ -154,10 +160,11 @@
     });
   
     /* ---------- GESTIÓN DE CITAS DEL BARBERO ---------- */
-    // Obtiene las citas desde la base de datos para el barbero en sesión
+    // Obtiene las citas del barbero en sesión (la base de datos tampoco le deja ver las de otros)
     function fetchBarberSchedule() {
-      db.from('citas').select('id, fecha, hora_inicio, estado, clientes(nombre), servicios(nombre)')
-        .order('fecha').order('hora_inicio')
+      var query = db.from('citas').select('id, fecha, hora_inicio, estado, clientes(nombre), servicios(nombre)');
+      if (currentUser && currentUser.barberoId != null) query = query.eq('barbero_id', currentUser.barberoId);
+      query.order('fecha').order('hora_inicio')
         .then(unwrap)
         .then(function (rows) {
           renderSchedule(rows.map(toAppt));
@@ -244,9 +251,11 @@
   
     // Actualiza el estado de una cita en la Base de Datos
     function updateAppointmentStatus(id, newStatus) {
-      db.from('citas').update({ estado: TO_DB[newStatus] }).eq('id', id)
+      db.from('citas').update({ estado: TO_DB[newStatus] }).eq('id', id).select('id')
         .then(unwrap)
-        .then(function () {
+        .then(function (rows) {
+          // Sin filas: la cita no es de este barbero y la base de datos no la modificó
+          if (!rows.length) throw new Error('No puedes modificar esta cita.');
           toast('Estado actualizado a ' + TO_DB[newStatus], 'ok');
           fetchBarberSchedule();
         })

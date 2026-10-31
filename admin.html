@@ -152,33 +152,9 @@
               
               <!-- Acciones de Administrador -->
               <div class="admin-actions-group">
-                <button type="button" id="toggleBarberFormBtn" class="btn btn--ghost btn--sm">＋ Registrar nuevo barbero</button>
+                <button type="button" id="openBarbersBtn" class="btn btn--ghost btn--sm">Gestionar barberos</button>
                 <a href="index.html#agendar" class="btn btn--blue btn--sm">Nueva cita</a>
               </div>
-            </div>
-
-            <!-- Formulario Desplegable para Registrar Barbero -->
-            <div id="newBarberDropdown" class="barber-dropdown-form" style="display: none;">
-              <form id="createBarberForm" novalidate>
-                <h3>Crear Nuevo Barbero</h3>
-                <p class="form-hint">Ingresa las credenciales de acceso para la cuenta del nuevo barbero.</p>
-                
-                <div class="fields-grid">
-                  <div class="field">
-                    <label for="newBarberUser">Usuario del barbero</label>
-                    <input type="text" id="newBarberUser" name="newBarberUser" placeholder="Ej. carlos_barber" required>
-                  </div>
-                  <div class="field">
-                    <label for="newBarberPass">Contraseña temporal</label>
-                    <input type="password" id="newBarberPass" name="newBarberPass" placeholder="••••••••" required>
-                  </div>
-                </div>
-
-                <div class="form-actions">
-                  <button type="button" id="cancelBarberBtn" class="btn btn--ghost btn--sm">Cancelar</button>
-                  <button type="submit" class="btn btn--blue btn--sm">Guardar barbero</button>
-                </div>
-              </form>
             </div>
 
             <div class="table-wrap">
@@ -221,6 +197,136 @@
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost" id="modalCancel">Cerrar</button>
         <button type="button" class="btn btn--blue" id="modalSave">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal CRUD de barberos -->
+  <div class="modal" id="barbersModal" role="dialog" aria-modal="true" aria-labelledby="barbersTitle">
+    <div class="modal__box modal__box--wide">
+      <h3 id="barbersTitle">Barberos</h3>
+      <p class="modal__who">Registra, edita o elimina los barberos, define en qué días y horas atienden y gestiona sus vacaciones.</p>
+
+      <div class="modal-tabs" role="tablist" aria-label="Secciones">
+        <button type="button" class="chip is-active" role="tab" aria-selected="true" aria-controls="tab-barberos" data-tab="tab-barberos">Barberos</button>
+        <button type="button" class="chip" role="tab" aria-selected="false" aria-controls="tab-vacaciones" data-tab="tab-vacaciones">Vacaciones</button>
+      </div>
+
+      <div id="tab-barberos" role="tabpanel">
+      <form id="barberForm" class="barber-form" novalidate>
+        <h4 id="barberFormTitle">Nuevo barbero</h4>
+        <div class="fields-grid">
+          <div class="field" id="f-barber-nombre">
+            <label for="barberNombre">Nombre</label>
+            <input type="text" id="barberNombre" maxlength="60" placeholder="Ej. Carlos Pérez" autocomplete="off" required>
+            <span class="field__error">Escribe un nombre de 3 a 60 caracteres.</span>
+          </div>
+          <div class="field" id="f-barber-tel">
+            <label for="barberTelefono">Teléfono (opcional)</label>
+            <input type="tel" id="barberTelefono" maxlength="20" placeholder="Ej. +57 300 123 4567" autocomplete="off">
+            <span class="field__error">Usa solo números, espacios, + o - (7 a 20 caracteres).</span>
+          </div>
+        </div>
+        <div class="horario-edit" id="f-barber-horario">
+          <span class="field__label">Horario de atención</span>
+          <div id="barberHorario"></div>
+          <span class="field__error">Marca al menos un día y revisa que la hora de salida sea posterior a la de entrada.</span>
+        </div>
+        <label class="check"><input type="checkbox" id="barberActivo" checked> <span>Activo (puede recibir citas)</span></label>
+        <div class="form-actions">
+          <button type="button" id="barberFormReset" class="btn btn--ghost btn--sm" hidden>Cancelar edición</button>
+          <button type="submit" id="barberFormSave" class="btn btn--blue btn--sm">Agregar barbero</button>
+        </div>
+      </form>
+
+      <form id="accessForm" class="barber-form" novalidate hidden>
+        <h4 id="accessTitle">Acceso al panel de barbero</h4>
+        <p class="form-note" id="accessNote"></p>
+        <div class="fields-grid">
+          <div class="field" id="f-access-correo">
+            <label for="accessCorreo">Correo</label>
+            <input type="email" id="accessCorreo" maxlength="100" placeholder="barbero@ejemplo.com" autocomplete="off">
+            <span class="field__error">Escribe un correo válido.</span>
+          </div>
+          <div class="field" id="f-access-pass">
+            <label for="accessPass">Contraseña</label>
+            <input type="password" id="accessPass" maxlength="72" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            <span class="field__error">La contraseña debe tener al menos 8 caracteres.</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="accessCancel" class="btn btn--ghost btn--sm">Cancelar</button>
+          <button type="submit" id="accessSave" class="btn btn--blue btn--sm">Crear acceso</button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Nombre</th><th>Teléfono</th><th>Horario</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="barbersTbody"></tbody>
+        </table>
+        <div class="empty" id="barbersEmpty" hidden>
+          <strong>Aún no hay barberos</strong>
+          Agrega el primero con el formulario de arriba.
+        </div>
+      </div>
+      </div>
+
+      <div id="tab-vacaciones" role="tabpanel" hidden>
+        <form id="vacForm" class="barber-form" novalidate>
+          <h4 id="vacFormTitle">Nuevas vacaciones</h4>
+          <div class="fields-grid">
+            <div class="field" id="f-vac-barbero">
+              <label for="vacBarbero">Barbero</label>
+              <select id="vacBarbero"></select>
+              <span class="field__error">Elige un barbero.</span>
+            </div>
+            <div class="field">
+              <label for="vacEstado">Estado</label>
+              <select id="vacEstado">
+                <option value="aprobado">Aprobadas (bloquean citas)</option>
+                <option value="pendiente">Pendientes</option>
+              </select>
+            </div>
+            <div class="field" id="f-vac-inicio">
+              <label for="vacInicio">Desde</label>
+              <input type="date" id="vacInicio">
+              <span class="field__error">Elige la fecha de inicio.</span>
+            </div>
+            <div class="field" id="f-vac-fin">
+              <label for="vacFin">Hasta</label>
+              <input type="date" id="vacFin">
+              <span class="field__error">Debe ser igual o posterior a la fecha de inicio.</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="vacMotivo">Motivo (opcional)</label>
+            <input type="text" id="vacMotivo" maxlength="120" placeholder="Ej. Vacaciones de fin de año" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="vacFormReset" class="btn btn--ghost btn--sm" hidden>Cancelar edición</button>
+            <button type="submit" id="vacFormSave" class="btn btn--blue btn--sm">Agregar vacaciones</button>
+          </div>
+        </form>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Barbero</th><th>Fechas</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="vacTbody"></tbody>
+          </table>
+          <div class="empty" id="vacEmpty" hidden>
+            <strong>Sin vacaciones registradas</strong>
+            Las vacaciones aprobadas impiden agendar citas con ese barbero en esas fechas.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" id="barbersClose">Cerrar</button>
       </div>
     </div>
   </div>

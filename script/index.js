@@ -119,6 +119,10 @@
     var SERVICES = [];
     // Los barberos vienen de Supabase (función barberos_publicos)
     var BARBERS = [];
+    // Horario de cada barbero activo (función horarios_publicos): barbero_id, dia_semana (0 = domingo … 6 = sábado), hora_inicio, hora_fin
+    var HORARIOS = [];
+    // Vacaciones aprobadas (función vacaciones_publicas): barbero_id, fecha_inicio, fecha_fin
+    var VACACIONES = [];
     var SERVICE_ICONS = {
       'Corte clásico': 'scissors', 'Corte degradado': 'comb', 'Arreglo de barba': 'mustache',
       'Corte y barba': 'pole', 'Afeitado clásico': 'razor'
@@ -159,15 +163,35 @@
         .then(function (rows) {
           BARBERS = rows.map(function (r) { return { id: r.id, name: r.nombre }; });
           if (!BARBERS.length) toast('No hay barberos disponibles.', 'error');
-          renderBarbers();
+          revalidate();
         })
         .catch(function () { toast('No se pudieron cargar los barberos.', 'error'); });
+    }
+    function loadHorarios() {
+      return db.rpc('horarios_publicos')
+        .then(unwrap)
+        .then(function (rows) {
+          HORARIOS = rows.map(function (r) {
+            return { barberId: r.barbero_id, dow: r.dia_semana, from: r.hora_inicio.slice(0, 5), to: r.hora_fin.slice(0, 5) };
+          });
+          revalidate();
+        })
+        .catch(function () { toast('No se pudieron cargar los horarios de los barberos.', 'error'); });
+    }
+    function loadVacaciones() {
+      return db.rpc('vacaciones_publicas')
+        .then(unwrap)
+        .then(function (rows) {
+          VACACIONES = rows.map(function (r) { return { barberId: r.barbero_id, from: r.fecha_inicio, to: r.fecha_fin }; });
+          revalidate();
+        })
+        .catch(function () { toast('No se pudieron cargar las vacaciones de los barberos.', 'error'); });
     }
     function refreshOccupied() {
       return db.rpc('horas_ocupadas').then(unwrap).then(function (rows) {
         offlineWarned = false;
         occupied = rows.map(function (r) { return { status: 'active', date: r.fecha, time: r.hora_inicio.slice(0, 5), barberId: r.barbero_id == null ? null : r.barbero_id }; });
-        renderSlots();
+        revalidate();
       }).catch(function () {
         if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con la base de datos.', 'error'); }
       });
@@ -181,12 +205,44 @@
         function (id) { $('submitBtn').disabled = false; return { id: id }; },
         function (e) { $('submitBtn').disabled = false; throw e; });
     }
-    function isTaken(date, time) {
+    function isTaken(date, time, barberId) {
       // Una hora está ocupada si ese mismo barbero la tiene; las citas viejas sin barbero bloquean la hora para todos
       return loadAppointments().some(function (a) {
         return a.status === 'active' && a.date === date && a.time === time &&
-          (a.barberId == null || a.barberId === state.barber);
+          (a.barberId == null || a.barberId === barberId);
       });
+    }
+
+    function addMinutes(t, mins) { var p = t.split(':'), m = +p[0] * 60 + +p[1] + mins; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+
+    function onVacation(barberId, date) {
+      return VACACIONES.some(function (v) { return v.barberId === barberId && v.from <= date && date <= v.to; });
+    }
+    // El barbero trabaja ese día, no está de vacaciones y el servicio completo cabe dentro de su horario
+    function worksAt(barberId, date, time) {
+      var s = currentService(), end = addMinutes(time, s ? s.mins : 30), dow = fromISO(date).getDay();
+      return !onVacation(barberId, date) &&
+        HORARIOS.some(function (h) { return h.barberId === barberId && h.dow === dow && h.from <= time && end <= h.to; });
+    }
+    function availableBarbers(date, time) {
+      return BARBERS.filter(function (br) { return worksAt(br.id, date, time) && !isTaken(date, time, br.id); });
+    }
+    function isPast(date, time) {
+      var now = new Date(), p = time.split(':');
+      return date === toISO(now) && (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes());
+    }
+    function someoneWorks(date) {
+      var dow = date.getDay(), iso = toISO(date);
+      return HORARIOS.some(function (h) {
+        return h.dow === dow && !onVacation(h.barberId, iso) && BARBERS.some(function (br) { return br.id === h.barberId; });
+      });
+    }
+
+    // Tras cambiar servicio, citas u horarios: descarta la hora o el barbero elegidos si ya no están libres
+    function revalidate() {
+      if (state.time && (isPast(state.date, state.time) || !availableBarbers(state.date, state.time).length)) state.time = null;
+      if (state.barber && !(state.time && availableBarbers(state.date, state.time).some(function (br) { return br.id === state.barber; }))) state.barber = null;
+      renderCalendar(); renderSlots(); renderBarbers(); updateSummary();
     }
   
     var today = new Date(); today.setHours(0, 0, 0, 0);
@@ -230,15 +286,19 @@
         b.querySelector('.service__name').textContent = s.name;
         b.addEventListener('click', function () {
           state.service = s.id; $('err-service').style.display = 'none';
-          renderServices(); updateSummary();
+          renderServices(); revalidate();
         });
         box.appendChild(b);
       });
     }
   
     function renderBarbers() {
-      var box = $('barbers'); if (!box) return; box.innerHTML = '';
-      BARBERS.forEach(function (br) {
+      var box = $('barbers'), hint = $('barbersHint'); if (!box) return; box.innerHTML = '';
+      if (!state.date || !state.time) { hint.style.display = 'block'; hint.textContent = 'Primero elige el día y la hora.'; return; }
+      var list = availableBarbers(state.date, state.time);
+      hint.style.display = list.length ? 'none' : 'block';
+      hint.textContent = 'No hay barberos libres a esa hora. Elige otra.';
+      list.forEach(function (br) {
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'service'; b.setAttribute('role', 'radio');
         b.setAttribute('aria-checked', state.barber === br.id);
@@ -247,8 +307,8 @@
           '<div class="service__name"></div><div class="service__meta">Barbero</div>';
         b.querySelector('.service__name').textContent = br.name;
         b.addEventListener('click', function () {
-          state.barber = br.id; state.time = null; $('err-barber').style.display = 'none';
-          renderBarbers(); renderSlots(); updateSummary();
+          state.barber = br.id; $('err-barber').style.display = 'none';
+          renderBarbers(); updateSummary();
         });
         box.appendChild(b);
       });
@@ -271,11 +331,12 @@
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'cal__day'; b.textContent = d;
         b.setAttribute('aria-label', longDate(iso));
-        if (date < today || date > max || date.getDay() === 0) b.disabled = true;
+        // Se deshabilitan los domingos y los días en que ningún barbero trabaja
+        if (date < today || date > max || date.getDay() === 0 || !someoneWorks(date)) b.disabled = true;
         if (+date === +today) b.classList.add('is-today');
         if (state.date === iso) b.classList.add('is-selected');
         b.addEventListener('click', (function (isoVal) { return function () {
-          state.date = isoVal; state.time = null; renderCalendar(); renderSlots(); updateSummary();
+          state.date = isoVal; state.time = null; state.barber = null; revalidate();
         }; })(iso));
         grid.appendChild(b);
       }
@@ -290,18 +351,16 @@
     function renderSlots() {
       var box = $('slots'), hint = $('slotsHint'); if (!box) return; box.innerHTML = '';
       if (!state.date) { hint.style.display = 'block'; hint.textContent = 'Primero selecciona un día en el calendario.'; return; }
-      if (!state.barber) { hint.style.display = 'block'; hint.textContent = 'Primero elige un barbero.'; return; }
       hint.style.display = 'none';
-      var now = new Date(), isToday = state.date === toISO(now), available = 0;
+      var available = 0;
       SLOTS.forEach(function (t) {
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'slot'; b.textContent = t; b.setAttribute('role', 'radio');
-        var past = false;
-        if (isToday) { var p = t.split(':'); past = (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes()); }
-        var taken = isTaken(state.date, t);
-        if (past || taken) { b.disabled = true; b.title = taken ? 'Hora ocupada' : 'Hora pasada'; } else { available++; }
+        var past = isPast(state.date, t);
+        var free = !past && availableBarbers(state.date, t).length > 0;
+        if (!free) { b.disabled = true; b.title = past ? 'Hora pasada' : 'Sin barberos disponibles'; } else { available++; }
         if (state.time === t) { b.classList.add('is-selected'); b.setAttribute('aria-checked', 'true'); }
-        b.addEventListener('click', function () { state.time = t; renderSlots(); updateSummary(); });
+        b.addEventListener('click', function () { state.time = t; $('err-barber').style.display = 'none'; revalidate(); });
         box.appendChild(b);
       });
       if (!available) { hint.style.display = 'block'; hint.textContent = 'No quedan horas libres este día.'; }
@@ -332,11 +391,11 @@
         var badMail = setError('f-email', !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email));
   
         if (!state.service) { $('err-service').style.display = 'block'; toast('Elige un servicio.', 'error'); $('services').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-        if (!state.barber)  { $('err-barber').style.display = 'block'; toast('Elige un barbero.', 'error'); $('barbers').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (!state.date)    { toast('Selecciona un día en el calendario.', 'error'); return; }
         if (!state.time)    { toast('Selecciona una hora disponible.', 'error'); return; }
+        if (!state.barber)  { $('err-barber').style.display = 'block'; toast('Elige un barbero.', 'error'); $('barbers').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (badName || badMail) { toast('Revisa tus datos de contacto.', 'error'); return; }
-        if (isTaken(state.date, state.time)) { toast('Esa hora acaba de ser reservada.', 'error'); state.time = null; renderSlots(); updateSummary(); return; }
+        if (isTaken(state.date, state.time, state.barber)) { toast('Esa hora acaba de ser reservada.', 'error'); state.barber = null; revalidate(); return; }
   
         var s = currentService();
         var br = currentBarber();
@@ -373,7 +432,7 @@
         $('name').value = ''; $('email').value = '';
         $('confirmCard').classList.remove('is-visible');
         $('bookingForm').style.display = '';
-        renderServices(); renderBarbers(); renderCalendar(); renderSlots(); updateSummary();
+        renderServices(); revalidate();
         $('agendar').scrollIntoView({ behavior: 'smooth' });
       });
     }
@@ -392,8 +451,10 @@
   
     setInterval(refreshOccupied, 10000);
   
-    renderServices(); renderCalendar(); renderSlots(); updateSummary();
+    renderServices(); revalidate();
     loadServices();
     loadBarbers();
+    loadHorarios();
+    loadVacaciones();
     refreshOccupied();
   })();

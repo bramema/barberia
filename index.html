@@ -69,7 +69,7 @@
         <div class="section__head">
           <h2>Reserva tu turno</h2>
           <div class="divider"></div>
-          <p id="horarioTexto">Elige servicio, día y hora. Atendemos de lunes a sábado, de 9:00 a 19:00.</p>
+          <p id="horarioTexto">Elige servicio, día y hora, y te mostramos los barberos libres. Atendemos de lunes a sábado, de 9:00 a 19:00.</p>
         </div>
 
         <div class="led-frame" id="bookingFrame">
@@ -85,16 +85,9 @@
                 <p class="field__error" id="err-service" style="display:none">Elige un servicio para continuar.</p>
               </section>
 
-              <!-- 2. Barbero (NUEVO) -->
-              <section class="panel panel--wide" aria-labelledby="t-barb">
-                <h3 class="panel__title" id="t-barb"><span class="step">2</span> Elige tu barbero</h3>
-                <div class="services" id="barbers" role="radiogroup" aria-label="Barberos"></div>
-                <p class="field__error" id="err-barber" style="display:none">Elige un barbero para continuar.</p>
-              </section>
-
-              <!-- 3. Calendario -->
+              <!-- 2. Calendario -->
               <section class="panel" aria-labelledby="t-cal">
-                <h3 class="panel__title" id="t-cal"><span class="step">3</span> Elige el día</h3>
+                <h3 class="panel__title" id="t-cal"><span class="step">2</span> Elige el día</h3>
                 <div class="cal__head">
                   <span class="cal__title" id="calTitle" aria-live="polite"></span>
                   <div class="cal__nav">
@@ -105,11 +98,19 @@
                 <div class="cal__grid" id="calGrid"></div>
               </section>
 
-              <!-- 4. Horas -->
+              <!-- 3. Horas -->
               <section class="panel" aria-labelledby="t-hora">
-                <h3 class="panel__title" id="t-hora"><span class="step">4</span> Horas disponibles</h3>
+                <h3 class="panel__title" id="t-hora"><span class="step">3</span> Horas disponibles</h3>
                 <div id="slots" class="slots" role="radiogroup" aria-label="Horas disponibles"></div>
                 <p class="hint" id="slotsHint">Primero selecciona un día en el calendario.</p>
+              </section>
+
+              <!-- 4. Barbero (solo los disponibles en la fecha y hora elegidas) -->
+              <section class="panel panel--wide" aria-labelledby="t-barb">
+                <h3 class="panel__title" id="t-barb"><span class="step">4</span> Elige tu barbero</h3>
+                <div class="services" id="barbers" role="radiogroup" aria-label="Barberos disponibles"></div>
+                <p class="hint" id="barbersHint">Primero elige el día y la hora.</p>
+                <p class="field__error" id="err-barber" style="display:none">Elige un barbero para continuar.</p>
               </section>
 
               <!-- 5. Datos -->
