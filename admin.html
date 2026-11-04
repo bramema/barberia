@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jost:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Tilt+Neon&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2">
   <link rel="icon" href="img/edc4bc20-2fe6-489e-b3e7-3bf4e2a25070.png">
 </head>
 <body>
@@ -213,7 +213,13 @@
       </div>
 
       <div id="tab-barberos" role="tabpanel">
-      <form id="barberForm" class="barber-form" novalidate>
+      <div class="barbers-toolbar">
+        <button type="button" id="newBarberBtn" class="btn btn--blue btn--sm" aria-expanded="false" aria-controls="barberForm">
+          <span class="btn__plus" aria-hidden="true">+</span> <span id="newBarberBtnText">Agregar barbero</span>
+        </button>
+      </div>
+
+      <form id="barberForm" class="barber-form barber-form--card" novalidate hidden>
         <h4 id="barberFormTitle">Nuevo barbero</h4>
         <div class="fields-grid">
           <div class="field" id="f-barber-nombre">
@@ -234,7 +240,7 @@
         </div>
         <label class="check"><input type="checkbox" id="barberActivo" checked> <span>Activo (puede recibir citas)</span></label>
         <div class="form-actions">
-          <button type="button" id="barberFormReset" class="btn btn--ghost btn--sm" hidden>Cancelar edición</button>
+          <button type="button" id="barberFormReset" class="btn btn--ghost btn--sm">Cancelar</button>
           <button type="submit" id="barberFormSave" class="btn btn--blue btn--sm">Agregar barbero</button>
         </div>
       </form>
@@ -269,7 +275,7 @@
         </table>
         <div class="empty" id="barbersEmpty" hidden>
           <strong>Aún no hay barberos</strong>
-          Agrega el primero con el formulario de arriba.
+          Pulsa «Agregar barbero» para registrar el primero.
         </div>
       </div>
       </div>
@@ -336,7 +342,7 @@
   <!-- Script independiente de la administración -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/conexion.js"></script>
-  <script src="script/admin.js"></script>
+  <script src="script/admin.js?v=2"></script>
 
 </body>
 </html>

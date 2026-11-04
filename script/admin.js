@@ -365,7 +365,7 @@
         var ac = document.createElement('td'); ac.className = 'cell-actions';
         var box = document.createElement('div'); box.className = 'actions';
         var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'btn btn--blue btn--sm'; ed.textContent = 'Editar';
-        var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--sm'; del.textContent = 'Eliminar';
+        var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--danger btn--sm'; del.textContent = 'Eliminar';
         var acc = document.createElement('button'); acc.type = 'button'; acc.className = 'btn btn--ghost btn--sm'; acc.textContent = 'Acceso';
         ed.addEventListener('click', function () { editBarber(b.id); });
         acc.addEventListener('click', function () { openAccess(b.id); });
@@ -441,6 +441,21 @@
         });
     }
 
+    // El formulario de alta/edición permanece oculto hasta pulsar "Agregar barbero" (o "Editar")
+    function showBarberForm() {
+      $('barberForm').hidden = false;
+      $('newBarberBtn').setAttribute('aria-expanded', 'true');
+      $('newBarberBtnText').textContent = 'Cerrar formulario';
+      $('newBarberBtn').classList.add('is-open');
+      $('barberForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function hideBarberForm() {
+      $('barberForm').hidden = true;
+      $('newBarberBtn').setAttribute('aria-expanded', 'false');
+      $('newBarberBtnText').textContent = 'Agregar barbero';
+      $('newBarberBtn').classList.remove('is-open');
+    }
+
     function resetBarberForm() {
       editingBarberId = null;
       $('barberForm').reset();
@@ -450,14 +465,14 @@
       setHorarioForm(HORARIO_GENERAL);
       $('barberFormTitle').textContent = 'Nuevo barbero';
       $('barberFormSave').textContent = 'Agregar barbero';
-      $('barberFormReset').hidden = true;
+      $('barberFormReset').textContent = 'Cancelar';
     }
 
     function markEditing(id) {
       editingBarberId = id;
       $('barberFormTitle').textContent = 'Editar barbero';
       $('barberFormSave').textContent = 'Guardar cambios';
-      $('barberFormReset').hidden = false;
+      $('barberFormReset').textContent = 'Cancelar edición';
     }
 
     function editBarber(id) {
@@ -468,6 +483,7 @@
       $('barberTelefono').value = b.telefono || '';
       $('barberActivo').checked = !!b.activo;
       setHorarioForm(horarioDe(id));
+      showBarberForm();
       $('barberNombre').focus();
     }
 
@@ -478,7 +494,7 @@
         .then(unwrap)
         .then(function (rows) {
           if (!rows.length) throw new Error('No tienes permiso para eliminar barberos.');
-          if (editingBarberId === id) resetBarberForm();
+          if (editingBarberId === id) { resetBarberForm(); hideBarberForm(); }
           toast('Barbero eliminado.', 'ok'); loadBarbers();
         })
         .catch(function (e) {
@@ -489,11 +505,10 @@
 
     function openBarbers() {
       buildHorarioEditor();
-      resetBarberForm(); resetVacForm(); closeAccess();
+      resetBarberForm(); hideBarberForm(); resetVacForm(); closeAccess();
       showTab('tab-barberos');
       $('barbersModal').classList.add('is-open');
       loadBarbers().then(loadAccesos);
-      $('barberNombre').focus();
     }
 
     function showTab(id) {
@@ -507,10 +522,16 @@
     function closeBarbers() { if ($('barbersModal')) $('barbersModal').classList.remove('is-open'); }
 
     if ($('barbersModal')) {
+      // Botón "Agregar barbero": despliega / oculta el formulario (delegado sobre el modal)
+      $('barbersModal').addEventListener('click', function (e) {
+        if (!e.target.closest('#newBarberBtn')) return;
+        if (!$('barberForm').hidden && editingBarberId === null) { hideBarberForm(); return; }
+        resetBarberForm(); closeAccess(); showBarberForm(); $('barberNombre').focus();
+      });
       $('openBarbersBtn').addEventListener('click', openBarbers);
       $('barbersClose').addEventListener('click', closeBarbers);
       $('barbersModal').addEventListener('click', function (e) { if (e.target === this) closeBarbers(); });
-      $('barberFormReset').addEventListener('click', resetBarberForm);
+      $('barberFormReset').addEventListener('click', function () { resetBarberForm(); hideBarberForm(); });
       $('accessCancel').addEventListener('click', closeAccess);
 
       $('accessForm').addEventListener('submit', function (e) {
@@ -562,7 +583,7 @@
           })
           .then(function () {
             toast(isNew ? 'Barbero agregado.' : 'Barbero actualizado.', 'ok');
-            resetBarberForm();
+            resetBarberForm(); hideBarberForm();
           })
           .catch(function (err) { toast(err.message, 'error'); })
           .then(function () { saveBtn.disabled = false; loadBarbers(); });
@@ -619,7 +640,7 @@
           box.appendChild(ok);
         }
         var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'btn btn--ghost btn--sm'; ed.textContent = 'Editar';
-        var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--sm'; del.textContent = 'Eliminar';
+        var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--danger btn--sm'; del.textContent = 'Eliminar';
         ed.addEventListener('click', function () { editVacacion(v.id); });
         del.addEventListener('click', function () { deleteVacacion(v); });
         box.appendChild(ed); box.appendChild(del); ac.appendChild(box); tr.appendChild(ac);
