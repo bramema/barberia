@@ -216,7 +216,7 @@
     .chip:hover { background: rgba(255, 255, 255, 0.08); }
     .chip.is-active { background: var(--white); color: #111; border-color: var(--white); }
     
-    .table-wrap { border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); overflow: hidden; box-shadow: var(--shadow); }
+    .table-wrap { border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); overflow: hidden; overflow-x: auto; -webkit-overflow-scrolling: touch; box-shadow: var(--shadow); }
     .table { width: 100%; border-collapse: collapse; }
     .table th { text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 600; padding: 14px 16px; background: rgba(0, 0, 0, 0.4); }
     .table td { padding: 14px 16px; border-top: 1px solid var(--line); font-size: 0.9rem; vertical-align: middle; }
@@ -252,12 +252,13 @@
     .modal__actions { display: flex; gap: 10px; margin-top: 20px; }
     .modal__actions .btn { flex: 1; }
     
-    /* Adaptación responsive de tablas para Admin */
-    @media (max-width: 759px) {
+    /* Adaptación responsive de tablas para Admin y Barbero:
+       por debajo de 1024px cada fila se muestra como tarjeta (etiqueta + valor) */
+    @media (max-width: 1023px) {
       .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
       .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
       .table tr { padding: 14px 16px; border-top: 1px solid var(--line); }
-      .table td { border: 0; padding: 5px 0; display: flex; justify-content: space-between; gap: 14px; text-align: right; }
+      .table td { border: 0; padding: 5px 0; display: flex; justify-content: space-between; gap: 14px; text-align: right; min-width: 0; overflow-wrap: anywhere; }
       .table td::before { content: attr(data-label); color: var(--muted); font-size: 0.78rem; font-weight: 600; text-align: left; flex-shrink: 0; }
       .table td.cell-actions { padding-top: 12px; }
       .table td.cell-actions::before { display: none; }
@@ -391,13 +392,13 @@
     .icon-btn[disabled] { opacity: 0.3; cursor: not-allowed; }
     
     .cal__grid {
-      display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; padding: 16px 14px; border-radius: 18px;
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; text-align: center; padding: 16px 14px; border-radius: 18px;
       background: linear-gradient(160deg, #111, #191919);
       box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.65), inset -3px -3px 8px rgba(255, 255, 255, 0.04), 0 1px 0 rgba(255, 255, 255, 0.06);
     }
     .cal__dow { font-size: 0.74rem; font-weight: 600; color: #8f8f96; padding: 6px 0; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.9); }
     .cal__day {
-      aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; font-size: 0.9rem; color: #ececef;
+      aspect-ratio: 1; width: 100%; min-width: 0; padding: 0; border-radius: 50%; border: 0; cursor: pointer; font-size: 0.9rem; color: #ececef;
       background: linear-gradient(145deg, #252525, #161616);
       box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.6), -2px -2px 5px rgba(255, 255, 255, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.07);
       transition: transform 0.2s var(--ease), box-shadow 0.2s, background 0.2s;
@@ -1114,7 +1115,7 @@
   margin-left: 10px; padding: 2px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
   color: var(--muted); font-size: 0.72rem; letter-spacing: 0;
 }
-@media (max-width: 759px) {
+@media (max-width: 1023px) {
   .table tr.table-group { padding: 0; }
   .table tr.table-group td { justify-content: flex-start; text-align: left; }
 }
@@ -1159,3 +1160,96 @@
 .chip--filter.is-open { border-color: var(--blue); color: #7dbcf7; }
 .chip__dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: #1e88e5; box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.25); }
 .chip--filter.has-filter .chip__dot { display: inline-block; }
+
+/* ========================================================================== */
+/* 6. CORRECCIONES RESPONSIVE (móviles, tablets y pantallas pequeñas)          */
+/* ========================================================================== */
+
+/* Modal "Reagendar cita": el borde de poste de barbero debe rodear la caja, no la pantalla */
+.modal__box.has-cane { position: relative; padding: 44px 40px 40px; }
+
+/* Botones de modales y formularios: pasan a la línea siguiente en vez de apretarse */
+.modal__actions, .barber-form .form-actions { flex-wrap: wrap; }
+.modal__actions .btn { flex: 1 1 140px; }
+
+/* Tablas en modo tarjeta: los correos solo se cortan cuando no caben */
+@media (max-width: 1023px) {
+  .table td.cell-email { word-break: normal; }
+  .table td > * { min-width: 0; }
+}
+
+/* Tablets y móviles */
+@media (max-width: 899px) {
+  body { background-attachment: scroll; }
+}
+
+/* Móviles */
+@media (max-width: 559px) {
+  /* Marco LED más delgado: deja más espacio al contenido */
+  .led-frame { --band: 30px; --bp: 14px; --bt: 7px; --b1: 1.4px; --b2: 2px; border-radius: 20px; }
+  .led-frame .panel { padding: 14px; }
+
+  /* Calendario compacto: los 7 días caben siempre */
+  .cal__grid { padding: 10px 6px; gap: 4px; border-radius: 14px; }
+  .cal__day { font-size: 0.82rem; }
+  .cal__dow { font-size: 0.68rem; }
+  .cal__title { font-size: 1.1rem; }
+
+  .hero__kicker { letter-spacing: 0.2em; gap: 10px; font-size: 0.74rem; }
+
+  .confirm { padding: 48px 22px 36px; }
+  .ticket { padding: 0 16px 8px; }
+  .ticket__head::before { left: -28px; } .ticket__head::after { right: -28px; }
+  .ticket__code { font-size: 1.6rem; letter-spacing: 0.1em; }
+
+  .modal__box { padding: 22px 18px; }
+  .modal__box.has-cane { padding: 40px 32px 34px; }
+
+  /* Formulario de barberos: horario legible en pantallas estrechas */
+  .barber-form, .barber-form--card { padding: 14px; }
+  .horario-row { grid-template-columns: 44px minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; }
+  .horario-row select { padding: 8px 4px; font-size: 0.85rem; min-width: 0; }
+  .barber-form .form-actions .btn { flex: 1 1 auto; }
+
+  /* Filtros: buscador y fecha ocupan todo el ancho */
+  .all-filter input[type="search"], .all-filter input[type="date"] { flex: 1 1 100%; }
+  .toolbar, .toolbar__left, .admin-actions-group { width: 100%; }
+  .admin-actions-group .btn { flex: 1 1 auto; }
+
+  .stat { padding: 16px; }
+  .stat__value { font-size: 2.3rem; }
+}
+
+/* Teléfonos muy pequeños (320–379px) */
+@media (max-width: 379px) {
+  #agendar .container { width: 100%; padding-inline: 6px; }
+  .led-frame { --band: 24px; --bp: 12px; --bt: 6px; }
+  .led-frame .panel { padding: 12px; }
+  .services { gap: 8px; }
+  .service { padding: 14px 4px 12px; }
+  .cal__grid { gap: 3px; padding: 8px 4px; }
+  .slots { grid-template-columns: repeat(2, 1fr); }
+  .hero__kicker::before, .hero__kicker::after { display: none; }
+}
+
+/* iOS: los campos con letra menor a 16px hacen zoom al enfocarlos */
+@media (max-width: 899px) and (hover: none) {
+  .field input, .field select, .all-filter input, .horario-row select,
+  .lcard :is(#adminLoginForm, #loginForm) .lfield input { font-size: 16px; }
+}
+
+/* Métricas: en tablets pequeñas las 3 tarjetas se apilan por dentro (icono arriba) para no desbordarse */
+.stats { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 560px) and (max-width: 1023px) {
+  .stat { flex-direction: column; text-align: center; gap: 10px; padding: 18px 12px; }
+  .stat__icon { width: 50px; height: 50px; font-size: 1.5rem; }
+  .stat__value { font-size: 2.2rem; }
+}
+
+/* Botones dentro de las tablas: nunca se parten a mitad de palabra */
+.table .actions .btn { white-space: nowrap; overflow-wrap: normal; }
+@media (max-width: 1023px) { .table .actions .btn { flex: 1 1 auto; } }
+@media (max-width: 379px) { .confirm h3 { font-size: 1.5rem; } }
