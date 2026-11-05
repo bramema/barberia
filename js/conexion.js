@@ -37,8 +37,10 @@ function vigilarSesion(panel, usuarioActual, onPerdida) {
 
 /* ---------- Servicios de una cita ----------
    Columnas a pedir junto con la cita y texto a mostrar: "Corte clásico + Barba y perfilado".
-   Las citas antiguas sin filas en cita_servicios usan su servicio_id. */
-const CITA_SERVICIOS_SELECT = 'servicios(nombre), cita_servicios(orden, servicios(nombre))';
+   Las citas antiguas sin filas en cita_servicios usan su servicio_id.
+   Entre citas y servicios hay dos relaciones (citas.servicio_id y la tabla cita_servicios):
+   hay que nombrar la directa (!citas_servicio_id_fkey) o Supabase rechaza la consulta (PGRST201). */
+const CITA_SERVICIOS_SELECT = 'servicios!citas_servicio_id_fkey(nombre), cita_servicios(orden, servicios(nombre))';
 
 function nombresServicios(r) {
   var lista = (r.cita_servicios || []).slice()
