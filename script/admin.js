@@ -24,7 +24,7 @@
     function unwrap(res) { if (res.error) throw res.error; return res.data; }
     function toAppt(r) {
       return {
-        id: r.id, date: r.fecha, time: r.hora_inicio.slice(0, 5), status: FROM_DB[r.estado] || 'active',
+        id: r.id, barberId: r.barbero_id == null ? null : r.barbero_id, date: r.fecha, time: r.hora_inicio.slice(0, 5), status: FROM_DB[r.estado] || 'active',
         name: r.clientes ? r.clientes.nombre : '—', email: r.clientes ? r.clientes.correo || '—' : '—',
         service: r.servicios ? r.servicios.nombre : '—', mins: r.servicios ? r.servicios.duracion_minutos : 30
       };
@@ -122,14 +122,26 @@
       if (cls) td.className = cls; tr.appendChild(td); return td;
     }
   
-    function refresh() {
+    // silent = actualización automática en segundo plano: solo se redibuja si algo cambió y sin animación
+    var lastSnapshot = '', animateRows = true;
+    function refresh(silent) {
       if (!loggedIn) return Promise.resolve();
-      return db.from('citas').select('id, fecha, hora_inicio, estado, clientes(nombre, correo), servicios(nombre, duracion_minutos)')
+      return db.from('citas').select('id, barbero_id, fecha, hora_inicio, estado, clientes(nombre, correo), servicios(nombre, duracion_minutos)')
+        .order('id')
         .then(unwrap)
-        .then(function (rows) { offlineWarned = false; cache = rows.map(toAppt); render(); })
+        .then(function (rows) {
+          offlineWarned = false;
+          var snap = JSON.stringify(rows);
+          if (silent && snap === lastSnapshot) return; // nada cambió: no se toca la pantalla
+          lastSnapshot = snap;
+          cache = rows.map(toAppt);
+          animateRows = !silent;
+          render();
+          animateRows = true;
+        })
         .catch(function () { if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con la base de datos.', 'error'); } });
     }
-  
+
     function render() {
       var all = load();
       var active = all.filter(function (a) { return a.status === 'active'; }).length;
@@ -147,7 +159,8 @@
   
       rows.forEach(function (a, i) {
         var tr = document.createElement('tr');
-        tr.style.animationDelay = Math.min(i * 40, 400) + 'ms';
+        if (animateRows) tr.style.animationDelay = Math.min(i * 40, 400) + 'ms';
+        else tr.style.animation = 'none';
         if (a.status === 'cancelled') tr.className = 'is-cancelled';
         cell(tr, 'Cliente', a.name);
         cell(tr, 'Correo', a.email, 'cell-email');
@@ -184,6 +197,14 @@
         .catch(function (e) { toast(e.message, 'error'); refresh(); });
     }
   
+    // Otra cita activa del mismo barbero a esa fecha y hora (las citas sin barbero chocan con todas)
+    function clashes(x, dateISO, t) {
+      var cur = load().filter(function (y) { return y.id === editingId; })[0];
+      var bid = cur ? cur.barberId : null;
+      return x.id !== editingId && x.status === 'active' && x.date === dateISO && x.time === t &&
+        (x.barberId == null || bid == null || x.barberId === bid);
+    }
+
     function minDate() { var d = new Date(); return toISO(d); }
   
     function fillTimes(dateISO, keep) {
@@ -191,7 +212,7 @@
       var list = load(), now = new Date(), isToday = dateISO === toISO(now), n = 0;
       var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Selecciona una hora'; sel.appendChild(ph);
       SLOTS.forEach(function (t) {
-        var taken = list.some(function (x) { return x.id !== editingId && x.status === 'active' && x.date === dateISO && x.time === t; });
+        var taken = list.some(function (x) { return clashes(x, dateISO, t); });
         var p = t.split(':'), past = isToday && (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes());
         if (taken || past) return;
         var o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); n++;
@@ -239,7 +260,7 @@
         if (!okD || !okT) return;
   
         var list = load();
-        var clash = list.some(function (x) { return x.id !== editingId && x.status === 'active' && x.date === d && x.time === t; });
+        var clash = list.some(function (x) { return clashes(x, d, t); });
         if (clash) { toast('Esa hora ya está ocupada.', 'error'); fillTimes(d); return; }
         var a = list.filter(function (x) { return x.id === editingId; })[0]; if (!a) return;
         db.from('citas').update({ fecha: d, hora_inicio: t, hora_fin: addMinutes(t, a.mins) }).eq('id', a.id)
@@ -768,5 +789,12 @@
       });
     }
 
-    setInterval(function () { refresh(); countPendingVac(); }, 10000);
+    // Actualización automática invisible; se pausa si la pestaña no está a la vista
+    setInterval(function () {
+      if (document.hidden) return;
+      refresh(true); countPendingVac();
+    }, 10000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { refresh(true); countPendingVac(); }
+    });
   })();
