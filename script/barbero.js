@@ -145,6 +145,10 @@
       $('barberNameText').textContent = currentUser ? currentUser.name : 'Barbero';
   
       fetchBarberSchedule();
+
+      // Las vacaciones son de cada barbero: el admin las gestiona desde su propio panel
+      $('vacSection').hidden = !currentUser || currentUser.barberoId == null;
+      if (!$('vacSection').hidden) { resetVacForm(); loadMyVacaciones(); }
     }
   
     // Cierre de Sesión
@@ -265,15 +269,133 @@
     }
   
     /* ---------- FILTROS DE TABLA ---------- */
-    document.querySelectorAll('.chip').forEach(function (chip) {
+    document.querySelectorAll('.filters .chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
-        document.querySelectorAll('.chip').forEach(function (el) { el.classList.remove('is-active'); });
+        document.querySelectorAll('.filters .chip').forEach(function (el) { el.classList.remove('is-active'); });
         chip.classList.add('is-active');
         currentFilter = chip.dataset.filter;
         fetchBarberSchedule();
       });
     });
   
+    /* ---------- VACACIONES DEL BARBERO (tabla "vacaciones_barberos") ----------
+       Se piden con la función solicitar_vacaciones(): quedan 'pendiente' hasta que el admin
+       las apruebe ('aprobado') o las rechace ('rechazado'). Solo se pueden retirar las pendientes. */
+    var VAC_ESTADOS = {
+      pendiente: { label: 'Pendiente', badge: 'badge--pending' },
+      aprobado: { label: 'Aprobada', badge: 'badge--active' },
+      rechazado: { label: 'Rechazada', badge: 'badge--cancel' }
+    };
+
+    function fromISO(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function dayLabel(iso) { return fromISO(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    function rangeLabel(a, b) { return a === b ? dayLabel(a) : dayLabel(a) + ' – ' + dayLabel(b); }
+
+    function loadMyVacaciones() {
+      db.from('vacaciones_barberos').select('id, fecha_inicio, fecha_fin, motivo, estado')
+        .eq('barbero_id', currentUser.barberoId)
+        .order('fecha_inicio', { ascending: false })
+        .then(unwrap)
+        .then(renderVacaciones)
+        .catch(function () { toast('No se pudieron cargar tus vacaciones.', 'error'); });
+    }
+
+    function renderVacaciones(rows) {
+      var tbody = $('vacTbody');
+      tbody.innerHTML = '';
+      $('vacEmpty').hidden = rows.length > 0;
+      var hoy = localISO(new Date());
+
+      rows.forEach(function (v) {
+        var tr = document.createElement('tr');
+        if (v.fecha_fin < hoy) tr.className = 'is-cancelled'; // ya terminaron
+
+        var tdDates = document.createElement('td');
+        tdDates.dataset.label = 'Fechas';
+        tdDates.textContent = rangeLabel(v.fecha_inicio, v.fecha_fin);
+        tr.appendChild(tdDates);
+
+        var tdMotivo = document.createElement('td');
+        tdMotivo.dataset.label = 'Motivo';
+        tdMotivo.textContent = v.motivo || '—';
+        tr.appendChild(tdMotivo);
+
+        var est = VAC_ESTADOS[v.estado] || VAC_ESTADOS.pendiente;
+        var tdStatus = document.createElement('td');
+        tdStatus.dataset.label = 'Estado';
+        var badge = document.createElement('span');
+        badge.className = 'badge ' + est.badge;
+        badge.textContent = est.label;
+        tdStatus.appendChild(badge);
+        tr.appendChild(tdStatus);
+
+        var tdAction = document.createElement('td');
+        tdAction.className = 'cell-actions';
+        if (v.estado === 'pendiente') {
+          var btnCancel = document.createElement('button');
+          btnCancel.type = 'button';
+          btnCancel.className = 'btn btn--ghost btn--sm';
+          btnCancel.textContent = 'Retirar';
+          btnCancel.addEventListener('click', function () { cancelVacacion(v); });
+          tdAction.appendChild(btnCancel);
+        }
+        tr.appendChild(tdAction);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function cancelVacacion(v) {
+      if (!window.confirm('¿Retirar tu solicitud de vacaciones (' + rangeLabel(v.fecha_inicio, v.fecha_fin) + ')?')) return;
+      db.from('vacaciones_barberos').delete().eq('id', v.id).select('id')
+        .then(unwrap)
+        .then(function (rows) {
+          // Sin filas: el admin ya la resolvió y la base de datos no la borró
+          if (!rows.length) throw new Error('Esta solicitud ya fue resuelta por el administrador.');
+          toast('Solicitud retirada.', 'ok');
+        })
+        .catch(function (err) { toast(err.message, 'error'); })
+        .then(loadMyVacaciones);
+    }
+
+    function resetVacForm() {
+      $('vacForm').reset();
+      $('f-vac-inicio').classList.remove('has-error');
+      $('f-vac-fin').classList.remove('has-error');
+      $('vacInicio').min = $('vacFin').min = localISO(new Date());
+    }
+
+    // "Hasta" no puede ser anterior a "Desde"
+    $('vacInicio').addEventListener('change', function () {
+      $('vacFin').min = this.value || localISO(new Date());
+      if ($('vacFin').value && $('vacFin').value < this.value) $('vacFin').value = this.value;
+    });
+
+    $('vacForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var ini = $('vacInicio').value, fin = $('vacFin').value;
+      var okI = !!ini && ini >= localISO(new Date());
+      var okF = false;
+      if (okI && fin >= ini) { // como máximo 60 días después del inicio
+        var limite = fromISO(ini); limite.setDate(limite.getDate() + 60);
+        okF = fin <= localISO(limite);
+      }
+      $('f-vac-inicio').classList.toggle('has-error', !okI);
+      $('f-vac-fin').classList.toggle('has-error', okI && !okF);
+      if (!okI || !okF) return;
+
+      var saveBtn = $('vacSave'); saveBtn.disabled = true;
+      db.rpc('solicitar_vacaciones', { p_inicio: ini, p_fin: fin, p_motivo: $('vacMotivo').value.trim() || null })
+        .then(unwrap)
+        .then(function () {
+          toast('Solicitud enviada. El administrador la revisará.', 'ok');
+          resetVacForm();
+          loadMyVacaciones();
+        })
+        .catch(function (err) { toast(err.message, 'error'); })
+        .then(function () { saveBtn.disabled = false; });
+    });
+
     /* ---------- NAVEGACIÓN MÓVIL ---------- */
     var toggle = $('navToggle'), links = $('navLinks');
     toggle.addEventListener('click', function () {

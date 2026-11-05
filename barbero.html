@@ -190,6 +190,50 @@
           </div>
         </div>
       </div>
+
+      <!-- Vacaciones: el barbero las pide y el administrador las aprueba, rechaza o edita -->
+      <section id="vacSection" class="section" aria-labelledby="vacTitle" style="padding-top:0">
+        <div class="admin-top">
+          <h2 id="vacTitle">Mis vacaciones</h2>
+          <p>Pide los días que quieres descansar. El administrador aprobará o rechazará tu solicitud.</p>
+        </div>
+
+        <form id="vacForm" class="barber-form" novalidate>
+          <h4>Pedir vacaciones</h4>
+          <div class="fields-grid">
+            <div class="field" id="f-vac-inicio">
+              <label for="vacInicio">Desde</label>
+              <input type="date" id="vacInicio" required>
+              <span class="field__error">Elige una fecha desde hoy.</span>
+            </div>
+            <div class="field" id="f-vac-fin">
+              <label for="vacFin">Hasta</label>
+              <input type="date" id="vacFin" required>
+              <span class="field__error">Debe ser igual o posterior a la fecha de inicio (máximo 60 días).</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="vacMotivo">Motivo (opcional)</label>
+            <input type="text" id="vacMotivo" maxlength="120" placeholder="Ej. Viaje familiar" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="vacSave" class="btn btn--blue btn--sm">Enviar solicitud</button>
+          </div>
+        </form>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Fechas</th><th>Motivo</th><th>Estado</th><th>Acción</th></tr>
+            </thead>
+            <tbody id="vacTbody"></tbody>
+          </table>
+          <div class="empty" id="vacEmpty" hidden>
+            <strong>Sin solicitudes</strong>
+            Aún no has pedido vacaciones.
+          </div>
+        </div>
+      </section>
     </section>
 
   </main>

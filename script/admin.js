@@ -44,7 +44,7 @@
       $('adminMainPanel').style.display = 'block';
       $('logoutBtn').style.display = 'inline-flex';
       $('adminGreeting').style.display = 'inline-block';
-      refresh();
+      refresh(); countPendingVac();
     }
 
     var adminLoginForm = $('adminLoginForm');
@@ -570,8 +570,14 @@
     }
 
     /* ---------- VACACIONES DE LOS BARBEROS (tabla "vacaciones_barberos") ----------
-       estado: 'pendiente' | 'aprobado'. Solo las aprobadas bloquean citas en la página de reservas. */
+       estado: 'pendiente' | 'aprobado' | 'rechazado'. Los barberos piden vacaciones desde su panel (quedan pendientes)
+       y el admin las aprueba, las rechaza o las edita. Solo las aprobadas bloquean citas en la página de reservas. */
     var vacaciones = [], editingVacId = null;
+    var VAC_ESTADOS = {
+      pendiente: { label: 'Pendiente', badge: 'badge--pending' },
+      aprobado: { label: 'Aprobada', badge: 'badge--active' },
+      rechazado: { label: 'Rechazada', badge: 'badge--cancel' }
+    };
 
     function dayLabel(iso) { return fromISO(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }); }
     function rangeLabel(a, b) { return a === b ? dayLabel(a) : dayLabel(a) + ' – ' + dayLabel(b); }
@@ -581,8 +587,23 @@
       return db.from('vacaciones_barberos').select('id, barbero_id, fecha_inicio, fecha_fin, motivo, estado, barberos(nombre)')
         .order('fecha_inicio', { ascending: false })
         .then(unwrap)
-        .then(function (rows) { vacaciones = rows; renderVacaciones(); })
+        .then(function (rows) { vacaciones = rows; renderVacaciones(); showPendingVac(rows.filter(isPendingVac).length); })
         .catch(function (e) { toast('No se pudieron cargar las vacaciones: ' + e.message, 'error'); });
+    }
+
+    function isPendingVac(v) { return v.estado === 'pendiente'; }
+
+    // Número de solicitudes por resolver en el botón "Gestionar barberos" y en la pestaña "Vacaciones"
+    function showPendingVac(n) {
+      var txt = n ? ' (' + n + ')' : '';
+      $('openBarbersBtn').textContent = 'Gestionar barberos' + txt;
+      document.querySelector('[data-tab="tab-vacaciones"]').textContent = 'Vacaciones' + txt;
+    }
+
+    function countPendingVac() {
+      if (!loggedIn || !$('openBarbersBtn')) return;
+      db.from('vacaciones_barberos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
+        .then(function (res) { if (!res.error) showPendingVac(res.count || 0); });
     }
 
     function fillVacBarberos() {
@@ -604,19 +625,24 @@
         cell(tr, 'Fechas', rangeLabel(v.fecha_inicio, v.fecha_fin));
         cell(tr, 'Motivo', v.motivo || '—');
 
-        var aprobada = v.estado === 'aprobado';
+        var est = VAC_ESTADOS[v.estado] || VAC_ESTADOS.pendiente;
         var st = document.createElement('td'); st.dataset.label = 'Estado';
         var badge = document.createElement('span');
-        badge.className = 'badge ' + (aprobada ? 'badge--active' : 'badge--pending');
-        badge.textContent = aprobada ? 'Aprobada' : 'Pendiente';
+        badge.className = 'badge ' + est.badge;
+        badge.textContent = est.label;
         st.appendChild(badge); tr.appendChild(st);
 
         var ac = document.createElement('td'); ac.className = 'cell-actions';
         var box = document.createElement('div'); box.className = 'actions';
-        if (!aprobada) {
+        if (v.estado !== 'aprobado') {
           var ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn btn--blue btn--sm'; ok.textContent = 'Aprobar';
-          ok.addEventListener('click', function () { approveVacacion(v); });
+          ok.addEventListener('click', function () { setVacEstado(v, 'aprobado'); });
           box.appendChild(ok);
+        }
+        if (v.estado !== 'rechazado') {
+          var no = document.createElement('button'); no.type = 'button'; no.className = 'btn btn--ghost btn--sm'; no.textContent = 'Rechazar';
+          no.addEventListener('click', function () { setVacEstado(v, 'rechazado'); });
+          box.appendChild(no);
         }
         var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'btn btn--ghost btn--sm'; ed.textContent = 'Editar';
         var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--sm'; del.textContent = 'Eliminar';
@@ -641,7 +667,7 @@
       resetVacForm();
       editingVacId = id;
       $('vacBarbero').value = v.barbero_id;
-      $('vacEstado').value = v.estado === 'aprobado' ? 'aprobado' : 'pendiente';
+      $('vacEstado').value = VAC_ESTADOS[v.estado] ? v.estado : 'pendiente';
       $('vacInicio').value = v.fecha_inicio;
       $('vacFin').value = v.fecha_fin;
       $('vacMotivo').value = v.motivo || '';
@@ -661,13 +687,17 @@
         });
     }
 
-    function approveVacacion(v) {
-      db.from('vacaciones_barberos').update({ estado: 'aprobado' }).eq('id', v.id).select('id')
+    function setVacEstado(v, estado) {
+      var aprobar = estado === 'aprobado';
+      if (!aprobar && !window.confirm('¿Rechazar las vacaciones de ' + vacBarberName(v) + ' (' + rangeLabel(v.fecha_inicio, v.fecha_fin) + ')?')) return;
+      db.from('vacaciones_barberos').update({ estado: estado }).eq('id', v.id).select('id')
         .then(unwrap)
         .then(function (rows) {
           if (!rows.length) throw new Error('No tienes permiso para gestionar vacaciones.');
-          toast('Vacaciones de ' + vacBarberName(v) + ' aprobadas.', 'ok');
-          warnCitas(v); loadVacaciones();
+          toast('Vacaciones de ' + vacBarberName(v) + (aprobar ? ' aprobadas.' : ' rechazadas.'), 'ok');
+          if (aprobar) warnCitas(v);
+          if (editingVacId === v.id) resetVacForm();
+          loadVacaciones();
         })
         .catch(function (e) { toast(e.message, 'error'); });
     }
@@ -717,5 +747,5 @@
       });
     }
 
-    setInterval(refresh, 10000);
+    setInterval(function () { refresh(); countPendingVac(); }, 10000);
   })();
