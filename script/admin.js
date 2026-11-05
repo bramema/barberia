@@ -26,10 +26,14 @@
     // Convierte la respuesta de Supabase en promesa: resuelve con data o lanza el error
     function unwrap(res) { if (res.error) throw res.error; return res.data; }
     function toAppt(r) {
+      var time = r.hora_inicio.slice(0, 5);
+      // Duración real de la cita (suma de sus servicios); las que no tienen hora de fin ocupan 30 min
+      var mins = r.hora_fin ? toMin(r.hora_fin.slice(0, 5)) - toMin(time) : 30;
+      if (!(mins > 0)) mins = 30;
       return {
-        id: r.id, barberId: r.barbero_id == null ? null : r.barbero_id, date: r.fecha, time: r.hora_inicio.slice(0, 5), status: FROM_DB[r.estado] || 'active',
+        id: r.id, barberId: r.barbero_id == null ? null : r.barbero_id, date: r.fecha, time: time, status: FROM_DB[r.estado] || 'active',
         name: r.clientes ? r.clientes.nombre : '—', email: r.clientes ? r.clientes.correo || '—' : '—',
-        service: r.servicios ? r.servicios.nombre : '—', mins: r.servicios ? r.servicios.duracion_minutos : 30
+        service: nombresServicios(r), mins: mins, end: addMinutes(time, mins)
       };
     }
 
@@ -98,7 +102,7 @@
     // Vuelve a la pantalla de inicio de sesión
     function showLogin(msg) {
       loggedIn = false; adminUid = null; cache = []; lastSnapshot = ''; pages = { active: 1, completed: 1, cancelled: 1 };
-      closeBarbers(); closeModal();
+      closeBarbers(); closeServices(); closeModal();
       if ($('adminLoginForm')) $('adminLoginForm').reset();
       $('adminMainPanel').style.display = 'none';
       $('adminLoginSection').style.display = 'block';
@@ -146,7 +150,7 @@
     var lastSnapshot = '', animateRows = true;
     function refresh(silent) {
       if (!loggedIn) return Promise.resolve();
-      return db.from('citas').select('id, barbero_id, fecha, hora_inicio, estado, clientes(nombre, correo), servicios(nombre, duracion_minutos)')
+      return db.from('citas').select('id, barbero_id, fecha, hora_inicio, hora_fin, estado, clientes(nombre, correo), ' + CITA_SERVICIOS_SELECT)
         .order('id')
         .then(unwrap)
         .then(function (rows) {
@@ -322,16 +326,21 @@
         .catch(function (e) { toast(e.message, 'error'); refresh(); });
     }
   
-    // Otra cita activa del mismo barbero a esa fecha y hora (las citas sin barbero chocan con todas)
+    /* Otra cita activa del mismo barbero que se cruce con la cita que se reagenda si empezara a la hora t
+       (dura lo mismo que todos sus servicios). Las citas sin barbero chocan con todas */
     function clashes(x, dateISO, t) {
       var cur = load().filter(function (y) { return y.id === editingId; })[0];
-      var bid = cur ? cur.barberId : null;
-      return x.id !== editingId && x.status === 'active' && x.date === dateISO && x.time === t &&
+      var bid = cur ? cur.barberId : null, end = addMinutes(t, cur ? cur.mins : 30);
+      return x.id !== editingId && x.status === 'active' && x.date === dateISO &&
+        x.time < end && t < x.end &&
         (x.barberId == null || bid == null || x.barberId === bid);
     }
 
-    // Horas de inicio posibles: de 7:00 a 18:30 (el local cierra a las 19:00)
-    function slotsCitas() { return rangeList(BASE.from, BASE.to).slice(0, -1); }
+    // Horas de inicio posibles: de 7:00 a 18:30, y la cita completa debe terminar a más tardar a las 19:00
+    function slotsCitas() {
+      var cur = load().filter(function (y) { return y.id === editingId; })[0], mins = cur ? cur.mins : 30;
+      return rangeList(BASE.from, BASE.to).slice(0, -1).filter(function (t) { return toMin(t) + mins <= toMin(BASE.to); });
+    }
 
     function minDate() { var d = new Date(); return toISO(d); }
   
@@ -387,7 +396,7 @@
   
     if ($('modalCancel')) $('modalCancel').addEventListener('click', closeModal);
     if ($('modal')) $('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); closeBarbers(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); closeBarbers(); closeServices(); } });
   
     if ($('modalSave')) {
       $('modalSave').addEventListener('click', function () {
@@ -933,6 +942,210 @@
           })
           .catch(function (err) { toast(err.message, 'error'); })
           .then(function () { saveBtn.disabled = false; loadVacaciones(); });
+      });
+    }
+
+    /* ---------- CRUD DE TIPOS DE SERVICIO (tabla "servicios" en Supabase) ----------
+       Solo los servicios activos aparecen en la página de reservas. Un servicio con citas
+       no se puede eliminar (la base lo impide): en ese caso se desactiva. Ver sql/servicios_admin.sql */
+    var services = [], editingServiceId = null;
+
+    function money(n) { return '$' + Number(n).toLocaleString('es-CO', { maximumFractionDigits: 2 }); }
+    function durLabel(m) { var h = Math.floor(m / 60), r = m % 60; return h ? h + ' h' + (r ? ' ' + r + ' min' : '') : m + ' min'; }
+    function serviceById(id) { return services.filter(function (s) { return s.id === id; })[0]; }
+
+    function loadServices() {
+      return db.from('servicios').select('id, nombre, precio, duracion_minutos, descripcion, icono, activo').order('nombre')
+        .then(unwrap)
+        .then(function (rows) { services = rows; renderServices(); })
+        .catch(function (e) { toast('No se pudieron cargar los servicios: ' + e.message, 'error'); });
+    }
+
+    function renderServices() {
+      var body = $('servicesTbody'); body.innerHTML = '';
+      $('servicesEmpty').hidden = services.length > 0;
+      services.forEach(function (s, i) {
+        var tr = document.createElement('tr');
+        tr.style.animationDelay = Math.min(i * 40, 400) + 'ms';
+        if (!s.activo) tr.className = 'is-cancelled';
+        // Nombre con su icono
+        var nm = document.createElement('td'); nm.dataset.label = 'Servicio';
+        var wrap = document.createElement('span'); wrap.className = 'cell-serv';
+        var ico = document.createElement('span'); ico.className = 'service__icon'; ico.setAttribute('aria-hidden', 'true');
+        ico.innerHTML = iconoServicio(s.icono);
+        var txt = document.createElement('span'); txt.textContent = s.nombre;
+        wrap.appendChild(ico); wrap.appendChild(txt); nm.appendChild(wrap); tr.appendChild(nm);
+        cell(tr, 'Precio', money(s.precio));
+        cell(tr, 'Duración', durLabel(s.duracion_minutos));
+        cell(tr, 'Descripción', s.descripcion || '—', 'cell-horario');
+
+        var st = document.createElement('td'); st.dataset.label = 'Estado';
+        var badge = document.createElement('span');
+        badge.className = 'badge ' + (s.activo ? 'badge--active' : 'badge--cancel');
+        badge.textContent = s.activo ? 'Activo' : 'Inactivo';
+        st.appendChild(badge); tr.appendChild(st);
+
+        var ac = document.createElement('td'); ac.className = 'cell-actions';
+        var box = document.createElement('div'); box.className = 'actions';
+        var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'btn btn--blue btn--sm'; ed.textContent = 'Editar';
+        var tg = document.createElement('button'); tg.type = 'button'; tg.className = 'btn btn--ghost btn--sm'; tg.textContent = s.activo ? 'Desactivar' : 'Activar';
+        var del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn--ghost btn--danger btn--sm'; del.textContent = 'Eliminar';
+        ed.addEventListener('click', function () { editService(s.id); });
+        tg.addEventListener('click', function () { toggleService(s); });
+        del.addEventListener('click', function () { deleteService(s); });
+        box.appendChild(ed); box.appendChild(tg); box.appendChild(del); ac.appendChild(box); tr.appendChild(ac);
+        body.appendChild(tr);
+      });
+    }
+
+    /* Selector de icono: una opción por cada icono de ICONOS_SERVICIO (js/iconos.js) */
+    function buildIconPicker() {
+      var box = $('servIconos'); if (box.children.length) return;
+      ICONOS_SERVICIO.forEach(function (ic) {
+        var lab = document.createElement('label'); lab.className = 'icon-pick'; lab.title = ic.nombre;
+        lab.innerHTML = '<input type="radio" name="servIcono"><span class="icon-pick__box">' +
+          '<span class="service__icon" aria-hidden="true">' + ICONOS[ic.id] + '</span><span class="icon-pick__name"></span></span>';
+        lab.querySelector('input').value = ic.id;
+        lab.querySelector('.icon-pick__name').textContent = ic.nombre;
+        lab.querySelector('input').addEventListener('change', function () { $('f-serv-icono').classList.remove('has-error'); });
+        box.appendChild(lab);
+      });
+    }
+    function setIcon(id) {
+      var valido = ICONOS_SERVICIO.some(function (ic) { return ic.id === id; });
+      if (!valido) id = ICONO_SERVICIO_POR_DEFECTO;
+      Array.prototype.forEach.call(document.querySelectorAll('input[name="servIcono"]'), function (r) { r.checked = r.value === id; });
+    }
+    function selectedIcon() {
+      var r = document.querySelector('input[name="servIcono"]:checked');
+      return r ? r.value : '';
+    }
+
+    function showServiceForm() {
+      $('serviceForm').hidden = false;
+      $('newServiceBtn').setAttribute('aria-expanded', 'true');
+      $('newServiceBtnText').textContent = 'Cerrar formulario';
+      $('newServiceBtn').classList.add('is-open');
+      $('serviceForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function hideServiceForm() {
+      $('serviceForm').hidden = true;
+      $('newServiceBtn').setAttribute('aria-expanded', 'false');
+      $('newServiceBtnText').textContent = 'Agregar servicio';
+      $('newServiceBtn').classList.remove('is-open');
+    }
+
+    function resetServiceForm() {
+      editingServiceId = null;
+      $('serviceForm').reset();
+      $('servActivo').checked = true;
+      setIcon(ICONO_SERVICIO_POR_DEFECTO);
+      ['f-serv-nombre', 'f-serv-precio', 'f-serv-duracion', 'f-serv-desc', 'f-serv-icono'].forEach(function (id) { $(id).classList.remove('has-error'); });
+      $('serviceFormTitle').textContent = 'Nuevo servicio';
+      $('serviceFormSave').textContent = 'Agregar servicio';
+      $('serviceFormReset').textContent = 'Cancelar';
+    }
+
+    function editService(id) {
+      var s = serviceById(id); if (!s) return;
+      resetServiceForm();
+      editingServiceId = id;
+      $('servNombre').value = s.nombre;
+      $('servPrecio').value = Number(s.precio);
+      $('servDuracion').value = s.duracion_minutos;
+      $('servDescripcion').value = s.descripcion || '';
+      $('servActivo').checked = !!s.activo;
+      setIcon(s.icono);
+      $('serviceFormTitle').textContent = 'Editar servicio';
+      $('serviceFormSave').textContent = 'Guardar cambios';
+      $('serviceFormReset').textContent = 'Cancelar edición';
+      showServiceForm();
+      $('servNombre').focus();
+    }
+
+    // Guarda en "servicios" y comprueba que la fila cambió (si RLS lo impide, Supabase no da error: devuelve 0 filas)
+    function saveService(query, okMsg) {
+      return query.select('id').then(unwrap).then(function (rows) {
+        if (!rows.length) throw new Error('No tienes permiso para modificar servicios.');
+        toast(okMsg, 'ok');
+        loadServices(); refresh(); // la tabla de citas muestra el nombre del servicio
+      });
+    }
+
+    function toggleService(s) {
+      var activar = !s.activo;
+      if (!activar && !window.confirm('¿Desactivar «' + s.nombre + '»? Dejará de aparecer en la página de reservas (las citas ya agendadas se mantienen).')) return;
+      saveService(db.from('servicios').update({ activo: activar }).eq('id', s.id), 'Servicio ' + (activar ? 'activado.' : 'desactivado.'))
+        .then(function () { if (editingServiceId === s.id) { resetServiceForm(); hideServiceForm(); } })
+        .catch(function (e) { toast(e.message, 'error'); });
+    }
+
+    function deleteService(s) {
+      if (!window.confirm('¿Eliminar el servicio «' + s.nombre + '»? Esta acción no se puede deshacer.')) return;
+      db.from('servicios').delete().eq('id', s.id).select('id')
+        .then(unwrap)
+        .then(function (rows) {
+          if (!rows.length) throw new Error('No tienes permiso para eliminar servicios.');
+          if (editingServiceId === s.id) { resetServiceForm(); hideServiceForm(); }
+          toast('Servicio eliminado.', 'ok'); loadServices();
+        })
+        .catch(function (e) {
+          // 23503: hay citas que usan este servicio
+          toast(e.code === '23503' ? '«' + s.nombre + '» tiene citas asociadas. Desactívalo en lugar de eliminarlo.' : e.message, 'error');
+        });
+    }
+
+    function openServices() {
+      buildIconPicker();
+      resetServiceForm(); hideServiceForm();
+      $('servicesModal').classList.add('is-open');
+      loadServices();
+    }
+    function closeServices() { if ($('servicesModal')) $('servicesModal').classList.remove('is-open'); }
+
+    if ($('servicesModal')) {
+      $('openServicesBtn').addEventListener('click', openServices);
+      $('servicesClose').addEventListener('click', closeServices);
+      $('servicesModal').addEventListener('click', function (e) { if (e.target === this) closeServices(); });
+      $('serviceFormReset').addEventListener('click', function () { resetServiceForm(); hideServiceForm(); });
+      // "Agregar servicio" despliega el formulario; si ya está abierto para uno nuevo, lo recoge
+      $('newServiceBtn').addEventListener('click', function () {
+        if (!$('serviceForm').hidden && editingServiceId === null) { hideServiceForm(); return; }
+        resetServiceForm(); showServiceForm(); $('servNombre').focus();
+      });
+
+      $('serviceForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var nombre = $('servNombre').value.trim().replace(/\s+/g, ' ');
+        var precioTxt = $('servPrecio').value.trim(), durTxt = $('servDuracion').value.trim();
+        var precio = Number(precioTxt), dur = Number(durTxt);
+        var desc = $('servDescripcion').value.trim().replace(/\s+/g, ' ');
+
+        // Dos servicios no pueden llamarse igual (sin distinguir mayúsculas ni tildes)
+        var repetido = services.some(function (s) { return s.id !== editingServiceId && normalize(s.nombre) === normalize(nombre); });
+        var okN = nombre.length >= 3 && nombre.length <= 60 && !repetido;
+        var okP = precioTxt !== '' && isFinite(precio) && precio >= 0 && precio <= 10000000;
+        var okD = durTxt !== '' && Number.isInteger(dur) && dur >= 5 && dur <= 240;
+        var okDesc = desc.length <= 200;
+        var icono = selectedIcon(), okI = ICONOS_SERVICIO.some(function (ic) { return ic.id === icono; });
+        $('servNombreErr').textContent = repetido ? 'Ya existe un servicio con ese nombre.' : 'Escribe un nombre de 3 a 60 caracteres.';
+        $('f-serv-nombre').classList.toggle('has-error', !okN);
+        $('f-serv-precio').classList.toggle('has-error', !okP);
+        $('f-serv-duracion').classList.toggle('has-error', !okD);
+        $('f-serv-desc').classList.toggle('has-error', !okDesc);
+        $('f-serv-icono').classList.toggle('has-error', !okI);
+        if (!okN || !okP || !okD || !okDesc || !okI) return;
+
+        var data = { nombre: nombre, precio: Math.round(precio * 100) / 100, duracion_minutos: dur, descripcion: desc || null, icono: icono, activo: $('servActivo').checked };
+        var isNew = editingServiceId === null;
+        var saveBtn = $('serviceFormSave'); saveBtn.disabled = true;
+        var query = isNew
+          ? db.from('servicios').insert(data)
+          : db.from('servicios').update(data).eq('id', editingServiceId);
+        saveService(query, isNew ? 'Servicio agregado.' : 'Servicio actualizado.')
+          .then(function () { resetServiceForm(); hideServiceForm(); })
+          .catch(function (err) { toast(err.message, 'error'); })
+          .then(function () { saveBtn.disabled = false; });
       });
     }
 

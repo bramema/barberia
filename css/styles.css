@@ -424,6 +424,7 @@
     .slot[disabled] { text-decoration: line-through; color: #55555a; cursor: not-allowed; background: transparent; box-shadow: none; }
     .slot.is-selected { background: var(--blue); border-color: var(--blue); color: var(--white); font-weight: 700; box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(30, 136, 229, 0.45); }
     .hint { color: var(--muted); font-size: 0.88rem; padding: 18px 0; text-align: center; }
+    .hint--left { text-align: left; padding: 0 0 14px; margin-top: -4px; }
     
     /* Campos de Formulario */
     .fields { display: grid; gap: 14px; }
@@ -1015,6 +1016,30 @@
 .horario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .field__label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: #d9d9dc; }
 
+/* Selector de icono del servicio (panel admin): cada opción es un radio oculto con su dibujo */
+.icon-field { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.icon-field.has-error .field__error { display: block; }
+.icon-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.icon-pick { position: relative; cursor: pointer; }
+.icon-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.icon-pick__box {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%;
+  padding: 10px 4px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03); text-align: center;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.icon-pick .service__icon { width: 40px; height: 40px; margin: 0; font-size: 1.25rem; }
+.icon-pick__name { font-size: 0.72rem; color: var(--muted); line-height: 1.2; }
+.icon-pick:hover .icon-pick__box { border-color: var(--line-strong); }
+.icon-pick input:focus-visible + .icon-pick__box { outline: 2px solid var(--blue); outline-offset: 2px; }
+.icon-pick input:checked + .icon-pick__box { border-color: var(--red); background: rgba(229, 57, 53, 0.12); box-shadow: 0 0 0 1px var(--red); }
+.icon-pick input:checked + .icon-pick__box .service__icon { background: var(--red); border-color: var(--red); }
+.icon-pick input:checked + .icon-pick__box .icon-pick__name { color: var(--white); }
+
+/* Icono junto al nombre en la tabla de servicios */
+.cell-serv { display: inline-flex; align-items: center; gap: 10px; }
+.cell-serv .service__icon { width: 32px; height: 32px; margin: 0; font-size: 1rem; flex: none; }
+
 .dias { display: flex; flex-wrap: wrap; gap: 8px; }
 .dia { position: relative; cursor: pointer; }
 .dia input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
@@ -1047,7 +1072,7 @@
 /* ========================================================================== */
 .barbers-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
 .btn__plus { font-size: 1.1rem; line-height: 1; font-weight: 700; transition: transform 0.25s var(--ease); }
-#newBarberBtn.is-open .btn__plus { transform: rotate(45deg); }
+:is(#newBarberBtn, #newServiceBtn).is-open .btn__plus { transform: rotate(45deg); }
 
 /* Tarjeta del formulario "Nuevo barbero": aparece solo al pulsar el botón */
 .barber-form--card {
@@ -1065,41 +1090,41 @@
 
 /* Botones del modal: opacos en reposo, se iluminan al pulsar / pasar el cursor / enfocar.
    Cada botón define su color de brillo con --glow (rgb sin comas para poder usar alfa). */
-#barbersModal .btn {
+:is(#barbersModal, #servicesModal) .btn {
   --glow: 255 255 255;                 /* blanco: Acceso, Cancelar, Cerrar */
   opacity: 0.5;
   filter: saturate(0.55);
   box-shadow: none;
   transition: opacity 0.25s, filter 0.25s, transform 0.25s var(--ease), box-shadow 0.25s, background 0.25s, color 0.25s, border-color 0.25s;
 }
-#barbersModal .btn--blue   { --glow: 30 136 229; }   /* Agregar / Editar / Guardar */
-#barbersModal .btn--danger { --glow: 229 57 53; }    /* Eliminar */
+:is(#barbersModal, #servicesModal) .btn--blue   { --glow: 30 136 229; }   /* Agregar / Editar / Guardar */
+:is(#barbersModal, #servicesModal) .btn--danger { --glow: 229 57 53; }    /* Eliminar */
 
-#barbersModal .btn:hover,
-#barbersModal .btn:focus-visible,
-#barbersModal .btn:active,
-#barbersModal .btn.is-open {
+:is(#barbersModal, #servicesModal) .btn:hover,
+:is(#barbersModal, #servicesModal) .btn:focus-visible,
+:is(#barbersModal, #servicesModal) .btn:active,
+:is(#barbersModal, #servicesModal) .btn.is-open {
   opacity: 1;
   filter: none;
   box-shadow: 0 0 0 3px rgb(var(--glow) / 0.22), 0 8px 24px rgb(var(--glow) / 0.5);
 }
 /* Los botones "ghost" (Acceso, Eliminar, Cancelar, Cerrar) se rellenan con su color al iluminarse */
-#barbersModal .btn--ghost:hover,
-#barbersModal .btn--ghost:focus-visible,
-#barbersModal .btn--ghost:active {
+:is(#barbersModal, #servicesModal) .btn--ghost:hover,
+:is(#barbersModal, #servicesModal) .btn--ghost:focus-visible,
+:is(#barbersModal, #servicesModal) .btn--ghost:active {
   border-color: rgb(var(--glow));
   background: rgb(var(--glow) / 0.16);
 }
-#barbersModal .btn--danger:hover,
-#barbersModal .btn--danger:focus-visible,
-#barbersModal .btn--danger:active {
+:is(#barbersModal, #servicesModal) .btn--danger:hover,
+:is(#barbersModal, #servicesModal) .btn--danger:focus-visible,
+:is(#barbersModal, #servicesModal) .btn--danger:active {
   background: var(--red);
   border-color: var(--red);
   color: var(--white);
 }
-#barbersModal .btn--blue:hover,
-#barbersModal .btn--blue:active { background: #3b9bf0; }
-#barbersModal .btn[disabled] { opacity: 0.3; filter: saturate(0.4); box-shadow: none; }
+:is(#barbersModal, #servicesModal) .btn--blue:hover,
+:is(#barbersModal, #servicesModal) .btn--blue:active { background: #3b9bf0; }
+:is(#barbersModal, #servicesModal) .btn[disabled] { opacity: 0.3; filter: saturate(0.4); box-shadow: none; }
 /* Tabla de citas del admin: títulos de sección (Activas / Completadas / Canceladas) */
 .table tbody tr.table-group:hover { background: transparent; }
 .table tr.table-group td {

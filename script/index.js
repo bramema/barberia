@@ -6,19 +6,8 @@
     'use strict';
   
     /* ---------- Iconos animados (SVG en línea) ---------- */
-    var ICONS = {
-      scissors: '<svg class="ico i-scissors" viewBox="0 0 24 24" aria-hidden="true"><g class="blade b1"><circle cx="6" cy="6" r="2.8"/><path d="M8.2 7.8L21 18.5"/></g><g class="blade b2"><circle cx="6" cy="18" r="2.8"/><path d="M8.2 16.2L21 5.5"/></g></svg>',
-      razor: '<svg class="ico i-razor" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-35 12 12)"><rect x="2" y="9.8" width="9" height="4.4" rx="1.6"/><path class="rz" d="M11 10.5h8.2a1.8 1.8 0 0 1 1.8 1.8V14H11"/><circle cx="11" cy="12" r=".9"/></g></svg>',
-      mustache: '<svg class="ico i-mustache" viewBox="0 0 24 24" aria-hidden="true"><path class="must" d="M12 10.4C10.6 8.8 8.2 8.4 6.2 9.2C4.2 10 2.8 11.6 2.2 14C4 12.9 5.6 13 7 14C8.8 15.3 10.6 15.2 12 13.2C13.4 15.2 15.2 15.3 17 14C18.4 13 20 12.9 21.8 14C21.2 11.6 19.8 10 17.8 9.2C15.8 8.4 13.4 8.8 12 10.4z"/></svg>',
-      pole: '<svg class="ico i-pole" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="5" width="8" height="14" rx="1.5"/><g clip-path="url(#pole-clip)"><g class="stripes"><path d="M8 -2l8-3.5M8 2.5l8-3.5M8 7l8-3.5M8 11.5l8-3.5M8 16l8-3.5M8 20.5l8-3.5"/></g></g><path d="M10 5V3M14 5V3M10 19v2M14 19v2"/></svg>',
-      bottle: '<svg class="ico i-bottle" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3h-4z"/><path d="M8 9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z"/><path d="M8 13h8"/><circle class="bub bx1" cx="10.8" cy="18" r=".7"/><circle class="bub bx2" cx="13.4" cy="17" r=".5"/><circle class="bub bx3" cx="12" cy="19" r=".6"/></svg>',
-      crown: '<svg class="ico i-crown" viewBox="0 0 24 24" aria-hidden="true"><path class="crown" d="M4 18L3 8l5 4 4-7 4 7 5-4-1 10z"/><path d="M4 21h16"/><path class="spark sp1" d="M12 0.8v2.4M10.8 2h2.4"/><path class="spark sp2" d="M21 2.5v2M20 3.5h2"/><path class="spark sp3" d="M3 2.5v2M2 3.5h2"/></svg>',
-      comb: '<svg class="ico i-comb" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="5" rx="1.2"/><path class="tooth" style="animation-delay:0s" d="M5.5 12v5"/><path class="tooth" style="animation-delay:.15s" d="M8.5 12v5"/><path class="tooth" style="animation-delay:.3s" d="M11.5 12v5"/><path class="tooth" style="animation-delay:.45s" d="M14.5 12v5"/><path class="tooth" style="animation-delay:.6s" d="M17.5 12v5"/></svg>',
-      cup: '<svg class="ico i-cup" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h11v4.5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5 15.5z"/><path d="M16 12h1.4a2.3 2.3 0 0 1 0 4.6H15.6"/><path d="M4 22h13"/><path class="steam" d="M8 8.5c-1-1.2 1-2.2 0-3.6"/><path class="steam s2" d="M11.5 8.5c-1-1.2 1-2.2 0-3.6"/><path class="steam s3" d="M15 8.5c-1-1.2 1-2.2 0-3.6"/></svg>',
-      check: '<svg class="ico i-check" viewBox="0 0 24 24" aria-hidden="true"><path class="draw" pathLength="1" d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-      chevL: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg>',
-      chevR: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>'
-    };
+    // Los dibujos están en js/iconos.js (compartidos con el panel admin)
+    var ICONS = ICONOS;
   
     function injectIcons() {
       Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function (el) {
@@ -123,10 +112,6 @@
     var HORARIOS = [];
     // Vacaciones aprobadas (función vacaciones_publicas): barbero_id, fecha_inicio, fecha_fin
     var VACACIONES = [];
-    var SERVICE_ICONS = {
-      'Corte clásico': 'scissors', 'Corte degradado': 'comb', 'Arreglo de barba': 'mustache',
-      'Corte y barba': 'pole', 'Afeitado clásico': 'razor'
-    };
   
     // Horario de atención: 7:00 a 19:00 → horas de inicio cada 30 min de 7:00 a 18:30
     var CIERRE = '19:00';
@@ -148,11 +133,11 @@
     function unwrap(res) { if (res.error) throw res.error; return res.data; }
 
     function loadServices() {
-      return db.from('servicios').select('id, nombre, precio, duracion_minutos').eq('activo', true).order('id')
+      return db.from('servicios').select('id, nombre, precio, duracion_minutos, icono').eq('activo', true).order('id')
         .then(unwrap)
         .then(function (rows) {
           SERVICES = rows.map(function (r) {
-            return { id: r.id, name: r.nombre, icon: SERVICE_ICONS[r.nombre] || 'scissors', price: Number(r.precio), mins: r.duracion_minutos };
+            return { id: r.id, name: r.nombre, icon: r.icono, price: Number(r.precio), mins: r.duracion_minutos };
           });
           if (!SERVICES.length) toast('No hay servicios disponibles.', 'error');
           renderServices();
@@ -192,7 +177,10 @@
     function refreshOccupied() {
       return db.rpc('horas_ocupadas').then(unwrap).then(function (rows) {
         offlineWarned = false;
-        occupied = rows.map(function (r) { return { status: 'active', date: r.fecha, time: r.hora_inicio.slice(0, 5), barberId: r.barbero_id == null ? null : r.barbero_id }; });
+        occupied = rows.map(function (r) {
+          var time = r.hora_inicio.slice(0, 5);
+          return { status: 'active', date: r.fecha, time: time, end: r.hora_fin ? r.hora_fin.slice(0, 5) : addMinutes(time, 30), barberId: r.barbero_id == null ? null : r.barbero_id };
+        });
         revalidate();
       }).catch(function () {
         if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con la base de datos.', 'error'); }
@@ -201,16 +189,18 @@
     function saveAppointments(appt) {
       $('submitBtn').disabled = true;
       return db.rpc('agendar_cita', {
-        p_nombre: appt.name, p_email: appt.email, p_servicio_id: appt.serviceId, p_fecha: appt.date, p_hora: appt.time,
+        p_nombre: appt.name, p_email: appt.email, p_servicios: appt.serviceIds, p_fecha: appt.date, p_hora: appt.time,
         p_barbero_id: appt.barberId
       }).then(unwrap).then(
         function (id) { $('submitBtn').disabled = false; return { id: id }; },
         function (e) { $('submitBtn').disabled = false; throw e; });
     }
+    /* El barbero está ocupado si alguna de sus citas se cruza con el tiempo que dura esta
+       (desde la hora elegida hasta que terminan todos los servicios). Las citas viejas sin barbero bloquean a todos */
     function isTaken(date, time, barberId) {
-      // Una hora está ocupada si ese mismo barbero la tiene; las citas viejas sin barbero bloquean la hora para todos
+      var end = endTime(time);
       return loadAppointments().some(function (a) {
-        return a.status === 'active' && a.date === date && a.time === time &&
+        return a.status === 'active' && a.date === date && a.time < end && time < a.end &&
           (a.barberId == null || a.barberId === barberId);
       });
     }
@@ -220,9 +210,12 @@
     function onVacation(barberId, date) {
       return VACACIONES.some(function (v) { return v.barberId === barberId && v.from <= date && date <= v.to; });
     }
-    // El barbero trabaja ese día, no está de vacaciones y el servicio completo cabe dentro de su horario
+    // Hora en que terminaría la cita: suma de los servicios elegidos (30 min si aún no hay ninguno)
+    function endTime(time) { return addMinutes(time, totalMins() || 30); }
+
+    // El barbero trabaja ese día, no está de vacaciones y todos los servicios seguidos caben dentro de su horario
     function worksAt(barberId, date, time) {
-      var s = currentService(), end = addMinutes(time, s ? s.mins : 30), dow = fromISO(date).getDay();
+      var end = endTime(time), dow = fromISO(date).getDay();
       return end <= CIERRE && !onVacation(barberId, date) &&
         HORARIOS.some(function (h) { return h.barberId === barberId && h.dow === dow && h.from <= time && end <= h.to; });
     }
@@ -248,7 +241,8 @@
     }
   
     var today = new Date(); today.setHours(0, 0, 0, 0);
-    var state = { service: null, barber: null, date: null, time: null, viewY: today.getFullYear(), viewM: today.getMonth() };
+    var MAX_SERVICES = 6;
+    var state = { services: [], barber: null, date: null, time: null, viewY: today.getFullYear(), viewM: today.getMonth() };
   
     var $ = function (id) { return document.getElementById(id); };
   
@@ -279,15 +273,21 @@
       var box = $('services'); if (!box) return; box.innerHTML = '';
       SERVICES.forEach(function (s) {
         var b = document.createElement('button');
-        b.type = 'button'; b.className = 'service'; b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', state.service === s.id);
-        if (state.service === s.id) b.classList.add('is-selected');
-        b.innerHTML = '<div class="service__icon" aria-hidden="true">' + ICONS[s.icon] + '</div>' +
+        var on = state.services.indexOf(s.id) !== -1;
+        b.type = 'button'; b.className = 'service'; b.setAttribute('role', 'checkbox');
+        b.setAttribute('aria-checked', on);
+        if (on) b.classList.add('is-selected');
+        b.innerHTML = '<div class="service__icon" aria-hidden="true">' + iconoServicio(s.icon) + '</div>' +
           '<div class="service__name"></div><div class="service__meta">' + s.mins + ' min</div>' +
           '<span class="service__price">' + money(s.price) + '</span>';
         b.querySelector('.service__name').textContent = s.name;
+        // Cada clic marca o desmarca el servicio; se guardan en el orden en que se eligen
         b.addEventListener('click', function () {
-          state.service = s.id; $('err-service').style.display = 'none';
+          var i = state.services.indexOf(s.id);
+          if (i !== -1) state.services.splice(i, 1);
+          else if (state.services.length >= MAX_SERVICES) { toast('Puedes elegir hasta ' + MAX_SERVICES + ' servicios por cita.', 'error'); return; }
+          else state.services.push(s.id);
+          $('err-service').style.display = 'none';
           renderServices(); revalidate();
         });
         box.appendChild(b);
@@ -368,16 +368,24 @@
       if (!available) { hint.style.display = 'block'; hint.textContent = 'No quedan horas libres este día.'; }
     }
   
-    function currentService() { return SERVICES.filter(function (s) { return s.id === state.service; })[0]; }
+    // Servicios elegidos, en el orden en que se marcaron (se ignoran los que ya no están disponibles)
+    function currentServices() {
+      return state.services.map(function (id) { return SERVICES.filter(function (s) { return s.id === id; })[0]; }).filter(Boolean);
+    }
+    function totalMins() { return currentServices().reduce(function (t, s) { return t + s.mins; }, 0); }
+    function totalPrice() { return currentServices().reduce(function (t, s) { return t + s.price; }, 0); }
+    function servicesText() { return currentServices().map(function (s) { return s.name; }).join(' + '); }
+    function durText(m) { var h = Math.floor(m / 60), r = m % 60; return h ? h + ' h' + (r ? ' ' + r + ' min' : '') : m + ' min'; }
     function currentBarber() { return BARBERS.filter(function (br) { return br.id === state.barber; })[0]; }
     function updateSummary() {
-      var s = currentService();
+      var mins = totalMins();
       var br = currentBarber();
-      if ($('sum-service')) $('sum-service').textContent = s ? s.name : '—';
+      if ($('sum-service')) $('sum-service').textContent = servicesText() || '—';
+      if ($('sum-duration')) $('sum-duration').textContent = mins ? durText(mins) + (state.time ? ' (hasta las ' + endTime(state.time) + ')' : '') : '—';
       if ($('sum-barber')) $('sum-barber').textContent = br ? br.name : '—';
       if ($('sum-date')) $('sum-date').textContent = state.date ? longDate(state.date) : '—';
       if ($('sum-time')) $('sum-time').textContent = state.time || '—';
-      if ($('sum-total')) $('sum-total').textContent = money(s ? s.price : 0);
+      if ($('sum-total')) $('sum-total').textContent = money(totalPrice());
       if ($('datetime')) $('datetime').value = state.date && state.time ? longDate(state.date) + ' · ' + state.time : '';
     }
   
@@ -392,19 +400,19 @@
         var badName = setError('f-name', name.split(' ').length < 2 || name.length < 5);
         var badMail = setError('f-email', !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email));
   
-        if (!state.service) { $('err-service').style.display = 'block'; toast('Elige un servicio.', 'error'); $('services').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        if (!currentServices().length) { $('err-service').style.display = 'block'; toast('Elige al menos un servicio.', 'error'); $('services').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (!state.date)    { toast('Selecciona un día en el calendario.', 'error'); return; }
         if (!state.time)    { toast('Selecciona una hora disponible.', 'error'); return; }
         if (!state.barber)  { $('err-barber').style.display = 'block'; toast('Elige un barbero.', 'error'); $('barbers').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (badName || badMail) { toast('Revisa tus datos de contacto.', 'error'); return; }
         if (isTaken(state.date, state.time, state.barber)) { toast('Esa hora acaba de ser reservada.', 'error'); state.barber = null; revalidate(); return; }
   
-        var s = currentService();
         var br = currentBarber();
         var appt = {
           id: 'RB-' + Date.now().toString(36).toUpperCase().slice(-6),
           name: name, email: email,
-          serviceId: s.id, service: s.name, price: s.price,
+          serviceIds: currentServices().map(function (s) { return s.id; }), service: servicesText(), price: totalPrice(),
+          mins: totalMins(), end: endTime(state.time),
           barberId: br.id, barber: br.name,
           date: state.date, time: state.time,
           status: 'active', createdAt: new Date().toISOString()
@@ -413,6 +421,7 @@
           appt.id = 'RB-' + created.id;
           $('c-id').textContent = appt.id; $('c-name').textContent = appt.name;
           $('c-service').textContent = appt.service + ' (' + money(appt.price) + ')';
+          if ($('c-duration')) $('c-duration').textContent = durText(appt.mins) + ' (hasta las ' + appt.end + ')';
           if ($('c-barber')) $('c-barber').textContent = appt.barber;
           $('c-date').textContent = longDate(appt.date); $('c-time').textContent = appt.time;
           $('bookingForm').style.display = 'none';
@@ -430,7 +439,7 @@
   
     if ($('newBooking')) {
       $('newBooking').addEventListener('click', function () {
-        state.service = null; state.barber = null; state.date = null; state.time = null;
+        state.services = []; state.barber = null; state.date = null; state.time = null;
         $('name').value = ''; $('email').value = '';
         $('confirmCard').classList.remove('is-visible');
         $('bookingForm').style.display = '';

@@ -34,3 +34,17 @@ function vigilarSesion(panel, usuarioActual, onPerdida) {
     db.auth.getSession().then(function (res) { revisar(res.data && res.data.session); });
   });
 }
+
+/* ---------- Servicios de una cita ----------
+   Columnas a pedir junto con la cita y texto a mostrar: "Corte clásico + Barba y perfilado".
+   Las citas antiguas sin filas en cita_servicios usan su servicio_id. */
+const CITA_SERVICIOS_SELECT = 'servicios(nombre), cita_servicios(orden, servicios(nombre))';
+
+function nombresServicios(r) {
+  var lista = (r.cita_servicios || []).slice()
+    .sort(function (a, b) { return a.orden - b.orden; })
+    .map(function (x) { return x.servicios ? x.servicios.nombre : null; })
+    .filter(Boolean);
+  if (!lista.length && r.servicios) lista.push(r.servicios.nombre);
+  return lista.length ? lista.join(' + ') : '—';
+}

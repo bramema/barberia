@@ -57,7 +57,7 @@
         time: r.hora_inicio.slice(0, 5),
         status: FROM_DB[r.estado] || 'active',
         name: r.clientes ? r.clientes.nombre : '—',
-        service: r.servicios ? r.servicios.nombre : '—'
+        service: nombresServicios(r)
       };
     }
 
@@ -186,7 +186,7 @@
     /* ---------- GESTIÓN DE CITAS DEL BARBERO ---------- */
     // Obtiene las citas del barbero en sesión (la base de datos tampoco le deja ver las de otros)
     function fetchBarberSchedule() {
-      var query = db.from('citas').select('id, fecha, hora_inicio, estado, clientes(nombre), servicios(nombre)');
+      var query = db.from('citas').select('id, fecha, hora_inicio, estado, clientes(nombre), ' + CITA_SERVICIOS_SELECT);
       if (currentUser && currentUser.barberoId != null) query = query.eq('barbero_id', currentUser.barberoId);
       query.order('fecha').order('hora_inicio')
         .then(unwrap)
