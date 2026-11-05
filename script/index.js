@@ -128,8 +128,10 @@
       'Corte y barba': 'pole', 'Afeitado clásico': 'razor'
     };
   
+    // Horario de atención: 7:00 a 19:00 → horas de inicio cada 30 min de 7:00 a 18:30
+    var CIERRE = '19:00';
     var SLOTS = [];
-    for (var h = 9; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
+    for (var h = 7; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
   
     var MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     var DOW = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
@@ -221,7 +223,7 @@
     // El barbero trabaja ese día, no está de vacaciones y el servicio completo cabe dentro de su horario
     function worksAt(barberId, date, time) {
       var s = currentService(), end = addMinutes(time, s ? s.mins : 30), dow = fromISO(date).getDay();
-      return !onVacation(barberId, date) &&
+      return end <= CIERRE && !onVacation(barberId, date) &&
         HORARIOS.some(function (h) { return h.barberId === barberId && h.dow === dow && h.from <= time && end <= h.to; });
     }
     function availableBarbers(date, time) {

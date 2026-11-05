@@ -49,7 +49,8 @@ begin
     raise exception 'La fecha no es válida.';
   end if;
   if extract(isodow from p_fecha) = 7 then raise exception 'Los domingos no atendemos.'; end if;
-  if p_hora is null or p_hora < '09:00' or p_hora > '18:30'
+  -- Horario de atención: de 7:00 a 19:00
+  if p_hora is null or p_hora < '07:00' or p_hora > '18:30'
      or extract(minute from p_hora) not in (0, 30) or extract(second from p_hora) <> 0 then
     raise exception 'La hora no es válida.';
   end if;
@@ -59,7 +60,7 @@ begin
 
   -- El servicio completo debe caber en el horario del barbero ese día
   v_fin := p_hora + make_interval(mins => v_servicio.duracion_minutos::int);
-  if v_fin < p_hora or not exists (
+  if v_fin < p_hora or v_fin > '19:00' or not exists (
     select 1 from horarios_barberos h
     where h.barbero_id = p_barbero_id and h.activo
       and h.dia_semana = extract(dow from p_fecha)

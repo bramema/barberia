@@ -5,9 +5,12 @@
    (function () {
     'use strict';
   
-    var cache = [], offlineWarned = false, loggedIn = false;
-    var SLOTS = [];
-    for (var h = 9; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
+    var cache = [], offlineWarned = false, loggedIn = false, adminUid = null;
+    // Horario de atención de la barbería: 7:00 a 19:00. Ninguna lista ofrece horas fuera de él
+    var BASE = { from: '07:00', to: '19:00' };
+    function toMin(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+    function fromMin(m) { return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+    function rangeList(from, to) { var out = []; for (var m = toMin(from); m <= toMin(to); m += 30) out.push(fromMin(m)); return out; }
 
     // Estados guardados en Supabase ↔ estados usados por la interfaz
     var FROM_DB = { pendiente: 'active', cancelada: 'cancelled', completada: 'completed' };
@@ -38,8 +41,9 @@
     }
     function isAdmin(perfil) { return !!perfil && perfil.rol === 'admin'; }
 
-    function showPanel() {
-      loggedIn = true;
+    function showPanel(user) {
+      loggedIn = true; adminUid = user.id;
+      marcarPanel('admin');
       $('adminLoginSection').style.display = 'none';
       $('adminMainPanel').style.display = 'block';
       $('logoutBtn').style.display = 'inline-flex';
@@ -64,14 +68,15 @@
 
         db.auth.signInWithPassword({ email: userInp, password: passInp })
           .then(unwrap)
-          .then(function (data) { return loadPerfil(data.user); })
-          .then(function (perfil) {
-            if (!isAdmin(perfil)) {
-              db.auth.signOut();
-              throw new Error('Esta cuenta no tiene permisos de administrador.');
-            }
-            toast('¡Bienvenido al panel!', 'ok');
-            showPanel();
+          .then(function (data) {
+            return loadPerfil(data.user).then(function (perfil) {
+              if (!isAdmin(perfil)) {
+                cerrarSesionLocal();
+                throw new Error('Esta cuenta no tiene permisos de administrador.');
+              }
+              toast('¡Bienvenido al panel!', 'ok');
+              showPanel(data.user);
+            });
           })
           .catch(function (err) {
             toast(err.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : err.message, 'error');
@@ -79,27 +84,42 @@
       });
     }
 
-    // Si ya había una sesión de admin abierta, entra directo
+    // Si ya había una sesión de admin abierta en este panel, entra directo.
+    // Si la sesión abierta es del panel de barbero (u otra cuenta), se cierra y se pide iniciar sesión
     db.auth.getSession().then(function (res) {
       var s = res.data && res.data.session;
       if (!s) return;
-      loadPerfil(s.user).then(function (perfil) { if (isAdmin(perfil)) showPanel(); }).catch(function () {});
+      if (!sesionEsDe('admin')) { cerrarSesionLocal(); return; }
+      loadPerfil(s.user).then(function (perfil) {
+        if (isAdmin(perfil)) showPanel(s.user); else cerrarSesionLocal();
+      }).catch(function () {});
     });
+
+    // Vuelve a la pantalla de inicio de sesión
+    function showLogin(msg) {
+      loggedIn = false; adminUid = null; cache = []; lastSnapshot = ''; pages = { active: 1, completed: 1, cancelled: 1 };
+      closeBarbers(); closeModal();
+      if ($('adminLoginForm')) $('adminLoginForm').reset();
+      $('adminMainPanel').style.display = 'none';
+      $('adminLoginSection').style.display = 'block';
+      $('logoutBtn').style.display = 'none';
+      if ($('adminGreeting')) $('adminGreeting').style.display = 'none';
+      toast(msg);
+    }
 
     var logoutBtn = $('logoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
-        loggedIn = false; cache = [];
-        closeBarbers();
-        db.auth.signOut();
-        if ($('adminLoginForm')) $('adminLoginForm').reset();
-        $('adminMainPanel').style.display = 'none';
-        $('adminLoginSection').style.display = 'block';
-        logoutBtn.style.display = 'none';
-        if ($('adminGreeting')) $('adminGreeting').style.display = 'none';
-        toast('Sesión cerrada.');
+        localStorage.removeItem(PANEL_KEY); // al instante: así el otro panel ya no la retoma
+        db.auth.signOut().catch(function () {});
+        showLogin('Sesión cerrada.');
       });
     }
+
+    // Si desde otra pestaña se abre el panel de barbero (u otra cuenta), este panel se cierra
+    vigilarSesion('admin', function () { return loggedIn ? adminUid : null; }, function () {
+      showLogin('Se cerró la sesión de administrador porque se abrió otro panel.');
+    });
   
     var filter = 'all', editingId = null;
   
@@ -142,49 +162,154 @@
         .catch(function () { if (!offlineWarned) { offlineWarned = true; toast('Sin conexión con la base de datos.', 'error'); } });
     }
 
+    /* Paginación de la tabla de citas: 5 por página en cada sección (Activas, Completadas, Canceladas),
+       con su propia barra "Anterior 1 2 3 … 10 Siguiente" debajo (siempre visible) */
+    var PAGE_SIZE = 5, pages = { active: 1, completed: 1, cancelled: 1 };
+
+    function goToPage(status, n) {
+      pages[status] = n; render();
+      var head = $('grp-' + status);
+      if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function buildPager(status, current, total) {
+      var nav = document.createElement('nav'); nav.className = 'pager';
+      nav.setAttribute('aria-label', 'Páginas');
+      function link(text, n, cls) {
+        var b = document.createElement('button'); b.type = 'button';
+        b.className = 'pager__link' + (cls ? ' ' + cls : ''); b.textContent = text;
+        b.addEventListener('click', function () { goToPage(status, n); });
+        nav.appendChild(b);
+      }
+      if (current > 1) link('Anterior', current - 1, 'pager__nav');
+      // Hasta 10 números alrededor de la página actual
+      var start = Math.max(1, Math.min(current - 5, total - 9)), end = Math.min(total, start + 9);
+      for (var n = start; n <= end; n++) {
+        if (n === current) {
+          var cur = document.createElement('span'); cur.className = 'pager__current';
+          cur.textContent = n; cur.setAttribute('aria-current', 'page'); nav.appendChild(cur);
+        } else link(String(n), n);
+      }
+      if (current < total) link('Siguiente', current + 1, 'pager__nav');
+      return nav;
+    }
+
+    /* Filtro del apartado "Todas": texto (cliente, correo o servicio) y fecha.
+       Solo cambia qué citas entran en cada sección; las secciones y la paginación siguen igual */
+    function normalize(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } // sin tildes: "jose" encuentra "José"
+    function applyAllFilter(list) {
+      var q = normalize($('allSearch') ? $('allSearch').value.trim() : ''), d = $('allDate') ? $('allDate').value : '';
+      if ($('allClear')) $('allClear').hidden = !q && !d;
+      if ($('allFilterBtn')) $('allFilterBtn').classList.toggle('has-filter', !!(q || d));
+      return list.filter(function (a) {
+        return (!d || a.date === d) && (!q || normalize(a.name + ' ' + a.email + ' ' + a.service).indexOf(q) !== -1);
+      });
+    }
+    // Botón "Filtrar": solo en "Todas"; despliega o recoge la barra de búsqueda y fecha
+    function setAllFilterOpen(open) {
+      $('allFilter').hidden = !open;
+      $('allFilterBtn').setAttribute('aria-expanded', open);
+      $('allFilterBtn').classList.toggle('is-open', open);
+    }
+    function showAllFilter() {
+      if (!$('allFilter')) return;
+      $('allFilterBtn').hidden = filter !== 'all';
+      if (filter !== 'all') setAllFilterOpen(false);
+    }
+
+    if ($('allFilter')) {
+      var onAllFilter = function () { pages = { active: 1, completed: 1, cancelled: 1 }; render(); };
+      $('allSearch').addEventListener('input', onAllFilter);
+      $('allDate').addEventListener('change', onAllFilter);
+      $('allClear').addEventListener('click', function () { $('allSearch').value = ''; $('allDate').value = ''; onAllFilter(); $('allSearch').focus(); });
+      $('allFilterBtn').addEventListener('click', function () {
+        var open = $('allFilter').hidden;
+        setAllFilterOpen(open);
+        if (open) $('allSearch').focus();
+      });
+    }
+
+    // La tabla se organiza por secciones: activas (próximas primero), completadas y canceladas (recientes primero)
+    var GROUPS = [
+      { status: 'active', title: 'Activas', badge: 'badge--active', label: 'Activa', asc: true },
+      { status: 'completed', title: 'Completadas', badge: 'badge--done', label: 'Completada', asc: false },
+      { status: 'cancelled', title: 'Canceladas', badge: 'badge--cancel', label: 'Cancelada', asc: false }
+    ];
+
     function render() {
       var all = load();
-      var active = all.filter(function (a) { return a.status === 'active'; }).length;
+      var count = function (st) { return all.filter(function (a) { return a.status === st; }).length; };
       if ($('m-total')) $('m-total').textContent = all.length;
-      if ($('m-active')) $('m-active').textContent = active;
-      if ($('m-cancel')) $('m-cancel').textContent = all.length - active;
-  
-      var rows = all.filter(function (a) { return filter === 'all' || (filter === 'active' ? a.status === 'active' : a.status === 'cancelled'); })
-        .sort(function (a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
-  
+      if ($('m-active')) $('m-active').textContent = count('active');
+      if ($('m-cancel')) $('m-cancel').textContent = count('cancelled');
+
       var body = $('tbody'); if (!body) return;
       body.innerHTML = '';
-      $('empty').hidden = rows.length > 0;
-      $('empty').querySelector('strong').textContent = all.length ? 'Sin resultados' : 'Aún no hay citas';
-  
-      rows.forEach(function (a, i) {
-        var tr = document.createElement('tr');
-        if (animateRows) tr.style.animationDelay = Math.min(i * 40, 400) + 'ms';
-        else tr.style.animation = 'none';
-        if (a.status === 'cancelled') tr.className = 'is-cancelled';
-        cell(tr, 'Cliente', a.name);
-        cell(tr, 'Correo', a.email, 'cell-email');
-        cell(tr, 'Servicio', a.service);
-        cell(tr, 'Fecha', shortDate(a.date));
-        cell(tr, 'Hora', a.time);
-  
-        var st = document.createElement('td'); st.dataset.label = 'Estado';
-        var badge = document.createElement('span');
-        var isActive = a.status === 'active';
-        badge.className = 'badge ' + (isActive ? 'badge--active' : 'badge--cancel');
-        badge.textContent = isActive ? 'Activa' : 'Cancelada';
-        st.appendChild(badge); tr.appendChild(st);
-  
-        var ac = document.createElement('td'); ac.className = 'cell-actions';
-        var box = document.createElement('div'); box.className = 'actions';
-        var re = document.createElement('button'); re.type = 'button'; re.className = 'btn btn--blue btn--sm'; re.textContent = 'Reagendar';
-        var ca = document.createElement('button'); ca.type = 'button'; ca.className = 'btn btn--ghost btn--sm'; ca.textContent = 'Cancelar';
-        if (!isActive) { re.disabled = true; ca.disabled = true; }
-        re.addEventListener('click', function () { openModal(a.id); });
-        ca.addEventListener('click', function () { cancelAppt(a.id); });
-        box.appendChild(re); box.appendChild(ca); ac.appendChild(box); tr.appendChild(ac);
-        body.appendChild(tr);
+      var list = filter === 'all' ? applyAllFilter(all) : all; // filtro del apartado "Todas"
+
+      var shown = 0, i = 0;
+      GROUPS.forEach(function (g) {
+        if (filter !== 'all' && filter !== g.status) return;
+        var rows = list.filter(function (a) { return a.status === g.status; })
+          .sort(function (a, b) { var c = (a.date + a.time).localeCompare(b.date + b.time); return g.asc ? c : -c; });
+        if (!rows.length) return;
+        shown += rows.length;
+
+        // Página actual de esta sección
+        var total = Math.ceil(rows.length / PAGE_SIZE);
+        var current = pages[g.status] = Math.min(Math.max(1, pages[g.status]), total);
+        var pageRows = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+        // Fila de título de la sección: "Activas · 3"
+        var head = document.createElement('tr'); head.className = 'table-group table-group--' + g.status;
+        head.id = 'grp-' + g.status;
+        if (!animateRows) head.style.animation = 'none';
+        var th = document.createElement('td'); th.colSpan = 7;
+        th.innerHTML = '<span class="table-group__title"></span><span class="table-group__count"></span>';
+        th.firstChild.textContent = g.title; th.lastChild.textContent = rows.length;
+        head.appendChild(th); body.appendChild(head);
+
+        pageRows.forEach(function (a) {
+          var tr = document.createElement('tr');
+          if (animateRows) tr.style.animationDelay = Math.min(i++ * 40, 400) + 'ms';
+          else tr.style.animation = 'none';
+          var isActive = a.status === 'active';
+          if (!isActive) tr.className = 'is-cancelled';
+          cell(tr, 'Cliente', a.name);
+          cell(tr, 'Correo', a.email, 'cell-email');
+          cell(tr, 'Servicio', a.service);
+          cell(tr, 'Fecha', shortDate(a.date));
+          cell(tr, 'Hora', a.time);
+
+          var st = document.createElement('td'); st.dataset.label = 'Estado';
+          var badge = document.createElement('span');
+          badge.className = 'badge ' + g.badge;
+          badge.textContent = g.label;
+          st.appendChild(badge); tr.appendChild(st);
+
+          // Solo las activas se pueden reagendar o cancelar
+          var ac = document.createElement('td'); ac.className = 'cell-actions';
+          if (isActive) {
+            var box = document.createElement('div'); box.className = 'actions';
+            var re = document.createElement('button'); re.type = 'button'; re.className = 'btn btn--blue btn--sm'; re.textContent = 'Reagendar';
+            var ca = document.createElement('button'); ca.type = 'button'; ca.className = 'btn btn--ghost btn--sm'; ca.textContent = 'Cancelar';
+            re.addEventListener('click', function () { openModal(a.id); });
+            ca.addEventListener('click', function () { cancelAppt(a.id); });
+            box.appendChild(re); box.appendChild(ca); ac.appendChild(box);
+          }
+          tr.appendChild(ac);
+          body.appendChild(tr);
+        });
+
+        // Paginación propia de la sección, al final de sus citas
+        var pr = document.createElement('tr'); pr.className = 'table-pager';
+        if (!animateRows) pr.style.animation = 'none';
+        var pd = document.createElement('td'); pd.colSpan = 7;
+        pd.appendChild(buildPager(g.status, current, total));
+        pr.appendChild(pd); body.appendChild(pr);
       });
+      $('empty').hidden = shown > 0;
+      $('empty').querySelector('strong').textContent = all.length ? 'Sin resultados' : 'Aún no hay citas';
     }
   
     function cancelAppt(id) {
@@ -205,18 +330,22 @@
         (x.barberId == null || bid == null || x.barberId === bid);
     }
 
+    // Horas de inicio posibles: de 7:00 a 18:30 (el local cierra a las 19:00)
+    function slotsCitas() { return rangeList(BASE.from, BASE.to).slice(0, -1); }
+
     function minDate() { var d = new Date(); return toISO(d); }
   
     function fillTimes(dateISO, keep) {
       var sel = $('newTime'); sel.innerHTML = '';
       var list = load(), now = new Date(), isToday = dateISO === toISO(now), n = 0;
       var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Selecciona una hora'; sel.appendChild(ph);
-      SLOTS.forEach(function (t) {
+      slotsCitas().forEach(function (t) {
         var taken = list.some(function (x) { return clashes(x, dateISO, t); });
         var p = t.split(':'), past = isToday && (+p[0] * 60 + +p[1]) <= (now.getHours() * 60 + now.getMinutes());
         if (taken || past) return;
         var o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); n++;
       });
+      if (!n) ph.textContent = isToday ? 'Ya no quedan horas hoy: elige otra fecha' : 'No hay horas libres este día';
       if (keep && Array.prototype.some.call(sel.options, function (o) { return o.value === keep; })) sel.value = keep;
       return n;
     }
@@ -231,9 +360,18 @@
       var a = load().filter(function (x) { return x.id === id; })[0]; if (!a) return;
       editingId = id;
       $('modalWho').textContent = a.name + ' · ' + a.service;
-      var inp = $('newDate'); inp.min = minDate(); inp.value = a.date;
+      // Una cita de un día ya pasado no se puede dejar en ese día: se empieza desde hoy
+      var inp = $('newDate'), fecha = a.date < minDate() ? minDate() : a.date;
+      inp.min = minDate();
       $('f-date').classList.remove('has-error'); $('f-time').classList.remove('has-error');
-      fillTimes(a.date, a.time);
+      // Si ese día ya no tiene horas libres (p. ej. hoy después del cierre), se propone el siguiente día que sí tenga
+      var n = validDate(fecha) ? fillTimes(fecha, a.time) : 0;
+      for (var i = 0; !n && i < 14; i++) {
+        var d = fromISO(fecha); d.setDate(d.getDate() + 1); fecha = toISO(d);
+        if (validDate(fecha)) n = fillTimes(fecha);
+      }
+      inp.value = fecha;
+      if (fecha !== a.date) toast('Ese día ya no tiene horas libres: se muestra el ' + shortDate(fecha) + '.');
       $('modal').classList.add('is-open'); inp.focus();
     }
     function closeModal() { $('modal').classList.remove('is-open'); editingId = null; }
@@ -273,14 +411,13 @@
     document.querySelectorAll('.filters .chip').forEach(function (c) {
       c.addEventListener('click', function () {
         document.querySelectorAll('.filters .chip').forEach(function (x) { x.classList.remove('is-active'); });
-        c.classList.add('is-active'); filter = c.dataset.filter; render();
+        c.classList.add('is-active'); filter = c.dataset.filter; showAllFilter(); render();
       });
     });
   
     /* ---------- CRUD DE BARBEROS (tabla "barberos" en Supabase) ---------- */
     var barbers = [], horarios = [], editingBarberId = null;
     var DIAS = ['', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
-    var HORAS = SLOTS.concat(['19:00']);
     var HORARIO_GENERAL = [1, 2, 3, 4, 5, 6].map(function (d) { return { dia_semana: d, hora_inicio: '09:00', hora_fin: '19:00' }; });
 
     function validBarberName(v) { return v.length >= 3 && v.length <= 60; }
@@ -320,11 +457,6 @@
         var row = document.createElement('div'); row.className = 'horario-row'; row.dataset.dia = d;
         row.innerHTML = '<label class="dia"><input type="checkbox"><span>' + DIAS[d] + '</span></label>' +
           '<select aria-label="Entrada ' + DIAS[d] + '"></select><span class="horario-row__sep">a</span><select aria-label="Salida ' + DIAS[d] + '"></select>';
-        var sels = row.querySelectorAll('select');
-        HORAS.forEach(function (t, i) {
-          if (i < HORAS.length - 1) sels[0].add(new Option(t, t));
-          if (i > 0) sels[1].add(new Option(t, t));
-        });
         row.querySelector('input').addEventListener('change', function () {
           var on = this.checked;
           Array.prototype.forEach.call(this.closest('.horario-row').querySelectorAll('select'), function (s) { s.disabled = !on; });
@@ -332,7 +464,22 @@
         });
         box.appendChild(row);
       }
+      fillHorarioOptions();
     }
+
+    // Llena las listas de entrada (7:00 a 18:30) y salida (7:30 a 19:00)
+    function fillHorarioOptions() {
+      var horas = rangeList(BASE.from, BASE.to);
+      horarioRows().forEach(function (row) {
+        Array.prototype.forEach.call(row.querySelectorAll('select'), function (sel, i) {
+          sel.innerHTML = '';
+          (i === 0 ? horas.slice(0, -1) : horas.slice(1)).forEach(function (t) { sel.add(new Option(t, t)); });
+        });
+      });
+    }
+
+    // Una hora guardada fuera del horario de atención se ajusta al límite más cercano (7:00 o 19:00)
+    function clampHora(t, min, max) { return t < min ? min : t > max ? max : t; }
 
     // El editor maneja un bloque por día: si en la base hay varios, se toma del primero al último
     function setHorarioForm(list) {
@@ -341,8 +488,8 @@
         var on = day.some(function (x) { return x.activo !== false; });
         var sels = row.querySelectorAll('select');
         row.querySelector('input').checked = on;
-        sels[0].value = day.length ? day[0].hora_inicio.slice(0, 5) : '09:00';
-        sels[1].value = day.length ? day[day.length - 1].hora_fin.slice(0, 5) : '19:00';
+        sels[0].value = clampHora(day.length ? day[0].hora_inicio.slice(0, 5) : '09:00', BASE.from, addMinutes(BASE.to, -30));
+        sels[1].value = clampHora(day.length ? day[day.length - 1].hora_fin.slice(0, 5) : '19:00', addMinutes(BASE.from, 30), BASE.to);
         sels[0].disabled = sels[1].disabled = !on;
       });
     }
@@ -353,7 +500,7 @@
       var out = [], ok = true;
       horarioRows().forEach(function (row) {
         var on = row.querySelector('input').checked, sels = row.querySelectorAll('select');
-        var valid = sels[0].value < sels[1].value;
+        var valid = !!sels[0].value && !!sels[1].value && sels[0].value < sels[1].value;
         if (on && !valid) ok = false;
         if (valid) out.push({ dia_semana: +row.dataset.dia, hora_inicio: sels[0].value, hora_fin: sels[1].value, activo: on });
       });

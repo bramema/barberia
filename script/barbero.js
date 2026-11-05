@@ -93,9 +93,10 @@
         .then(function (data) {
           return loadPerfil(data.user).then(function (perfil) {
             if (!isStaff(perfil)) {
-              db.auth.signOut();
-              throw new Error(perfil && perfil.rol === 'barbero'
-                ? 'Tu cuenta no está enlazada a ningún barbero. Pide al administrador que la configure.'
+              cerrarSesionLocal();
+              throw new Error(
+                perfil && perfil.rol === 'admin' ? 'Esta es una cuenta de administrador. Entra desde el panel de administrador.'
+                : perfil && perfil.rol === 'barbero' ? 'Tu cuenta no está enlazada a ningún barbero. Pide al administrador que la configure.'
                 : 'Esta cuenta no tiene acceso al panel de barbero.');
             }
             setUser(data.user, perfil);
@@ -122,24 +123,27 @@
         });
     }
 
-    // Un barbero solo entra si su cuenta está enlazada a un barbero; el admin entra y ve todas las citas
+    // Solo entran barberos con la cuenta enlazada a un barbero; el admin usa su propio panel (admin.html)
     function isStaff(perfil) {
-      return !!perfil && ((perfil.rol === 'barbero' && perfil.barbero_id != null) || perfil.rol === 'admin');
+      return !!perfil && perfil.rol === 'barbero' && perfil.barbero_id != null;
     }
 
     function setUser(user, perfil) {
+      marcarPanel('barbero');
       currentUser = {
         id: user.id, name: perfil.nombre || user.email,
         barberoId: perfil.rol === 'barbero' ? perfil.barbero_id : null
       };
     }
 
-    // Si ya había una sesión abierta, entra directo
+    // Si ya había una sesión abierta en este panel, entra directo.
+    // Si la sesión abierta es del panel de admin, se cierra y se pide iniciar sesión
     db.auth.getSession().then(function (res) {
       var s = res.data && res.data.session;
       if (!s) return;
+      if (!sesionEsDe('barbero')) { cerrarSesionLocal(); return; }
       loadPerfil(s.user).then(function (perfil) {
-        if (isStaff(perfil)) { setUser(s.user, perfil); showDashboard(); }
+        if (isStaff(perfil)) { setUser(s.user, perfil); showDashboard(); } else cerrarSesionLocal();
       }).catch(function () {});
     });
   
@@ -159,15 +163,24 @@
     }
   
     // Cierre de Sesión
-    $('logoutBtn').addEventListener('click', function () {
-      currentUser = null;
-      db.auth.signOut();
+    function showLogin(msg) {
+      currentUser = null; pages = { active: 1, completed: 1, cancelled: 1 };
       $('loginForm').reset();
       $('barberDashboard').style.display = 'none';
       $('loginSection').style.display = 'block';
       $('logoutBtn').style.display = 'none';
       $('barberGreeting').style.display = 'none';
-      toast('Sesión cerrada correctamente.');
+      toast(msg);
+    }
+    $('logoutBtn').addEventListener('click', function () {
+      localStorage.removeItem(PANEL_KEY); // al instante: así el otro panel ya no la retoma
+      db.auth.signOut().catch(function () {});
+      showLogin('Sesión cerrada correctamente.');
+    });
+
+    // Si desde otra pestaña se abre el panel de admin (u otra cuenta), este panel se cierra
+    vigilarSesion('barbero', function () { return currentUser ? currentUser.id : null; }, function () {
+      showLogin('Se cerró tu sesión porque se abrió otro panel.');
     });
   
     /* ---------- GESTIÓN DE CITAS DEL BARBERO ---------- */
@@ -187,6 +200,7 @@
   
     // Renderiza las filas de la tabla según los datos recibidos
     function renderSchedule(citas) {
+      lastCitas = citas;
       var tbody = $('barberTbody');
       tbody.innerHTML = '';
   
@@ -195,7 +209,7 @@
       var filtered = citas.filter(function (c) {
         if (currentFilter === 'today') return c.date === todayStr;
         if (currentFilter === 'upcoming') return c.date > todayStr;
-        return true; // 'all'
+        return allFilterMatch(c); // 'all': aplica el filtro de búsqueda y fecha
       });
   
       // Actualización de Métricas
@@ -208,58 +222,160 @@
       $('stat-completed').textContent = completedCount;
   
       $('barberEmpty').hidden = filtered.length > 0;
-  
-      // Construcción de filas dinámicas
-      filtered.forEach(function (c) {
-        var tr = document.createElement('tr');
-  
-        var tdTime = document.createElement('td');
-        tdTime.dataset.label = 'Hora';
-        tdTime.textContent = c.time;
-        tr.appendChild(tdTime);
-  
-        var tdClient = document.createElement('td');
-        tdClient.dataset.label = 'Cliente';
-        tdClient.textContent = c.name;
-        tr.appendChild(tdClient);
-  
-        var tdService = document.createElement('td');
-        tdService.dataset.label = 'Servicio';
-        tdService.textContent = c.service;
-        tr.appendChild(tdService);
-  
-        var tdDate = document.createElement('td');
-        tdDate.dataset.label = 'Fecha';
-        tdDate.textContent = c.date;
-        tr.appendChild(tdDate);
-  
-        var tdStatus = document.createElement('td');
-        tdStatus.dataset.label = 'Estado';
-        var badge = document.createElement('span');
-        badge.className = 'badge ' + (c.status === 'completed' ? 'badge--active' : (c.status === 'cancelled' ? 'badge--cancel' : ''));
-        badge.textContent = c.status === 'completed' ? 'Completada' : (c.status === 'cancelled' ? 'Cancelada' : 'Pendiente');
-        tdStatus.appendChild(badge);
-        tr.appendChild(tdStatus);
-  
-        var tdAction = document.createElement('td');
-        tdAction.className = 'cell-actions';
-        
-        if (c.status === 'active') {
-          var btnComplete = document.createElement('button');
-          btnComplete.type = 'button';
-          btnComplete.className = 'btn btn--blue btn--sm';
-          btnComplete.textContent = 'Completar';
-          btnComplete.addEventListener('click', function () {
-            updateAppointmentStatus(c.id, 'completed');
-          });
-          tdAction.appendChild(btnComplete);
-        }
-        tr.appendChild(tdAction);
-  
-        tbody.appendChild(tr);
+
+      // Secciones: pendientes (la más próxima primero), completadas y canceladas (la más reciente primero)
+      var GROUPS = [
+        { status: 'active', title: 'Pendientes', badge: 'badge--active', label: 'Pendiente', asc: true },
+        { status: 'completed', title: 'Completadas', badge: 'badge--done', label: 'Completada', asc: false },
+        { status: 'cancelled', title: 'Canceladas', badge: 'badge--cancel', label: 'Cancelada', asc: false }
+      ];
+
+      GROUPS.forEach(function (g) {
+        var rows = filtered.filter(function (c) { return c.status === g.status; })
+          .sort(function (a, b) { var r = (a.date + a.time).localeCompare(b.date + b.time); return g.asc ? r : -r; });
+        if (!rows.length) return;
+
+        // Página actual de esta sección
+        var total = Math.ceil(rows.length / PAGE_SIZE);
+        var current = pages[g.status] = Math.min(Math.max(1, pages[g.status]), total);
+        var pageRows = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+        // Fila de título de la sección: "Pendientes · 3"
+        var head = document.createElement('tr'); head.className = 'table-group table-group--' + g.status;
+        head.id = 'grp-' + g.status;
+        var th = document.createElement('td'); th.colSpan = 6;
+        th.innerHTML = '<span class="table-group__title"></span><span class="table-group__count"></span>';
+        th.firstChild.textContent = g.title; th.lastChild.textContent = rows.length;
+        head.appendChild(th); tbody.appendChild(head);
+
+        pageRows.forEach(function (c) {
+          var tr = document.createElement('tr');
+          if (c.status !== 'active') tr.className = 'is-cancelled';
+
+          var tdTime = document.createElement('td');
+          tdTime.dataset.label = 'Hora';
+          tdTime.textContent = c.time;
+          tr.appendChild(tdTime);
+
+          var tdClient = document.createElement('td');
+          tdClient.dataset.label = 'Cliente';
+          tdClient.textContent = c.name;
+          tr.appendChild(tdClient);
+
+          var tdService = document.createElement('td');
+          tdService.dataset.label = 'Servicio';
+          tdService.textContent = c.service;
+          tr.appendChild(tdService);
+
+          var tdDate = document.createElement('td');
+          tdDate.dataset.label = 'Fecha';
+          tdDate.textContent = shortDate(c.date);
+          tr.appendChild(tdDate);
+
+          var tdStatus = document.createElement('td');
+          tdStatus.dataset.label = 'Estado';
+          var badge = document.createElement('span');
+          badge.className = 'badge ' + g.badge;
+          badge.textContent = g.label;
+          tdStatus.appendChild(badge);
+          tr.appendChild(tdStatus);
+
+          var tdAction = document.createElement('td');
+          tdAction.className = 'cell-actions';
+          if (c.status === 'active') {
+            var btnComplete = document.createElement('button');
+            btnComplete.type = 'button';
+            btnComplete.className = 'btn btn--blue btn--sm';
+            btnComplete.textContent = 'Completar';
+            btnComplete.addEventListener('click', function () {
+              updateAppointmentStatus(c.id, 'completed');
+            });
+            tdAction.appendChild(btnComplete);
+          }
+          tr.appendChild(tdAction);
+
+          tbody.appendChild(tr);
+        });
+
+        // Paginación propia de la sección, al final de sus citas
+        var pr = document.createElement('tr'); pr.className = 'table-pager';
+        var pd = document.createElement('td'); pd.colSpan = 6;
+        pd.appendChild(buildPager(g.status, current, total));
+        pr.appendChild(pd); tbody.appendChild(pr);
       });
     }
-  
+
+    /* Filtro del apartado "Todas": texto (cliente o servicio) y fecha.
+       Solo cambia qué citas entran en cada sección; las secciones y la paginación siguen igual */
+    function normalize(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } // sin tildes
+    function allFilterMatch(c) {
+      var q = normalize($('allSearch') ? $('allSearch').value.trim() : ''), d = $('allDate') ? $('allDate').value : '';
+      return (!d || c.date === d) && (!q || normalize(c.name + ' ' + c.service).indexOf(q) !== -1);
+    }
+    // Botón "Filtrar": solo en "Todas"; despliega o recoge la barra de búsqueda y fecha
+    function setAllFilterOpen(open) {
+      $('allFilter').hidden = !open;
+      $('allFilterBtn').setAttribute('aria-expanded', open);
+      $('allFilterBtn').classList.toggle('is-open', open);
+    }
+    function showAllFilter() {
+      if (!$('allFilter')) return;
+      var active = !!($('allSearch').value.trim() || $('allDate').value);
+      $('allClear').hidden = !active;
+      $('allFilterBtn').classList.toggle('has-filter', active);
+      $('allFilterBtn').hidden = currentFilter !== 'all';
+      if (currentFilter !== 'all') setAllFilterOpen(false);
+    }
+    if ($('allFilter')) {
+      var onAllFilter = function () { pages = { active: 1, completed: 1, cancelled: 1 }; showAllFilter(); renderSchedule(lastCitas); };
+      $('allSearch').addEventListener('input', onAllFilter);
+      $('allDate').addEventListener('change', onAllFilter);
+      $('allClear').addEventListener('click', function () { $('allSearch').value = ''; $('allDate').value = ''; onAllFilter(); $('allSearch').focus(); });
+      $('allFilterBtn').addEventListener('click', function () {
+        var open = $('allFilter').hidden;
+        setAllFilterOpen(open);
+        if (open) $('allSearch').focus();
+      });
+      showAllFilter();
+    }
+
+    /* Paginación: 5 citas por página en cada sección, con su barra "Anterior 1 2 3 … 10 Siguiente" */
+    var PAGE_SIZE = 5, pages = { active: 1, completed: 1, cancelled: 1 }, lastCitas = [];
+
+    function goToPage(status, n) {
+      pages[status] = n; renderSchedule(lastCitas);
+      var head = $('grp-' + status);
+      if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function buildPager(status, current, total) {
+      var nav = document.createElement('nav'); nav.className = 'pager';
+      nav.setAttribute('aria-label', 'Páginas');
+      function link(text, n, cls) {
+        var b = document.createElement('button'); b.type = 'button';
+        b.className = 'pager__link' + (cls ? ' ' + cls : ''); b.textContent = text;
+        b.addEventListener('click', function () { goToPage(status, n); });
+        nav.appendChild(b);
+      }
+      if (current > 1) link('Anterior', current - 1, 'pager__nav');
+      // Hasta 10 números alrededor de la página actual
+      var start = Math.max(1, Math.min(current - 5, total - 9)), end = Math.min(total, start + 9);
+      for (var n = start; n <= end; n++) {
+        if (n === current) {
+          var cur = document.createElement('span'); cur.className = 'pager__current';
+          cur.textContent = n; cur.setAttribute('aria-current', 'page'); nav.appendChild(cur);
+        } else link(String(n), n);
+      }
+      if (current < total) link('Siguiente', current + 1, 'pager__nav');
+      return nav;
+    }
+
+    // "2026-11-04" → "mié, 04 nov 2026"
+    function shortDate(iso) {
+      var p = iso.split('-');
+      return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
     // Actualiza el estado de una cita en la Base de Datos
     function updateAppointmentStatus(id, newStatus) {
       db.from('citas').update({ estado: TO_DB[newStatus] }).eq('id', id).select('id')
@@ -281,6 +397,8 @@
         document.querySelectorAll('.filters .chip').forEach(function (el) { el.classList.remove('is-active'); });
         chip.classList.add('is-active');
         currentFilter = chip.dataset.filter;
+        pages = { active: 1, completed: 1, cancelled: 1 };
+        showAllFilter();
         fetchBarberSchedule();
       });
     });

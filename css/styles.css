@@ -723,7 +723,7 @@
 .lcircle[aria-current="page"] { box-shadow: 0 0 0 3px #fafafa, 0 0 0 6px var(--acc), 0 8px 16px rgba(0, 0, 0, 0.3); }
 
 /* Responsive para los paneles de administración y barbero */
-@media (max-width: 760px) {
+@media (max-width: 759px) {
   .lwrap { padding: 36px 14px 78px; border-radius: 24px; }
   .lcard__face { grid-template-columns: 1fr; gap: 0; min-height: 0; padding: 30px 24px 56px; border-radius: 26px; }
   .lcard__bump { display: none; }
@@ -997,7 +997,7 @@
 }
 
 /* Adaptación responsive */
-@media (max-width: 760px) {
+@media (max-width: 759px) {
   .lwrap { padding: 36px 14px 78px; border-radius: 24px; }
   .lcard__face { grid-template-columns: 1fr; gap: 0; min-height: 0; padding: 30px 24px 56px; border-radius: 26px; }
   .lcard__bump { display: none; }
@@ -1099,3 +1099,63 @@
 #barbersModal .btn--blue:hover,
 #barbersModal .btn--blue:active { background: #3b9bf0; }
 #barbersModal .btn[disabled] { opacity: 0.3; filter: saturate(0.4); box-shadow: none; }
+/* Tabla de citas del admin: títulos de sección (Activas / Completadas / Canceladas) */
+.table tbody tr.table-group:hover { background: transparent; }
+.table tr.table-group td {
+  padding: 18px 16px 10px; background: rgba(255, 255, 255, 0.03);
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #d9d9dc;
+}
+.table tr.table-group td::before { content: none; }
+.table-group__title { display: inline-flex; align-items: center; gap: 10px; }
+.table-group__title::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #7dbcf7; }
+.table-group--completed .table-group__title::before { background: #6fdc9a; }
+.table-group--cancelled .table-group__title::before { background: #ff8e8b; }
+.table-group__count {
+  margin-left: 10px; padding: 2px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
+  color: var(--muted); font-size: 0.72rem; letter-spacing: 0;
+}
+@media (max-width: 759px) {
+  .table tr.table-group { padding: 0; }
+  .table tr.table-group td { justify-content: flex-start; text-align: left; }
+}
+.badge--done { background: rgba(67, 209, 122, 0.16); color: #6fdc9a; border: 1px solid rgba(67, 209, 122, 0.5); }
+
+/* Paginación de la tabla de citas: "Anterior 1 2 3 … 10 Siguiente" */
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 6px; margin-top: 18px; }
+.pager[hidden] { display: none; }
+.pager__link, .pager__current {
+  min-width: 34px; height: 34px; padding: 0 8px; border-radius: 8px; border: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 0.95rem; background: transparent;
+}
+.pager__link { color: #7dbcf7; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.pager__link:hover, .pager__link:focus-visible { background: rgba(30, 136, 229, 0.16); color: #fff; outline: none; }
+.pager__current { color: #fff; font-weight: 700; background: rgba(255, 255, 255, 0.08); }
+.pager__nav { padding: 0 12px; font-weight: 600; }
+/* Paginación dentro de la tabla, al final de cada sección */
+.table tbody tr.table-pager:hover { background: transparent; }
+.table tr.table-pager td { padding: 4px 16px 16px; border-top: 0; }
+.table tr.table-pager td::before { content: none; }
+.table tr.table-pager .pager { margin-top: 6px; width: 100%; }
+
+/* Filtro del apartado "Todas" (búsqueda y fecha) */
+.all-filter { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.all-filter[hidden] { display: none; }
+.all-filter input {
+  height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05); color: var(--white); font: inherit; font-size: 0.9rem;
+  color-scheme: dark; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.all-filter input[type="search"] { flex: 1 1 260px; min-width: 0; }
+.all-filter input[type="date"] { flex: 0 0 auto; }
+.all-filter input::placeholder { color: #6e6e74; }
+.all-filter input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.25); background: rgba(255, 255, 255, 0.08); }
+
+/* Botón "Filtrar" del apartado "Todas" */
+.toolbar__left { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.chip--filter { display: inline-flex; align-items: center; gap: 7px; }
+.chip--filter[hidden] { display: none; }
+.chip--filter svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.chip--filter.is-open { border-color: var(--blue); color: #7dbcf7; }
+.chip__dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: #1e88e5; box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.25); }
+.chip--filter.has-filter .chip__dot { display: inline-block; }

@@ -42,10 +42,10 @@ begin
   if jsonb_typeof(p_horario) <> 'array' or exists (
     select 1 from jsonb_array_elements(p_horario) d
     where (d ->> 'dia_semana')::int not between 1 and 6
-       or (d ->> 'hora_inicio')::time < '09:00' or (d ->> 'hora_fin')::time > '19:00'
+       or (d ->> 'hora_inicio')::time < '07:00' or (d ->> 'hora_fin')::time > '19:00'
        or (d ->> 'hora_inicio')::time >= (d ->> 'hora_fin')::time
   ) then
-    raise exception 'El horario no es válido (lunes a sábado, de 9:00 a 19:00).';
+    raise exception 'El horario no es válido (lunes a sábado, de 7:00 a 19:00).';
   end if;
 
   delete from horarios_barberos where barbero_id = p_barbero_id;
