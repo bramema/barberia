@@ -112,7 +112,14 @@
 
     // Rol del usuario guardado en la tabla "perfiles": admin o barbero (enlazado con barbero_id)
     function loadPerfil(user) {
-      return db.from('perfiles').select('nombre, rol, barbero_id').eq('id', user.id).maybeSingle().then(unwrap);
+      return db.from('perfiles').select('nombre, rol, barbero_id').eq('id', user.id).maybeSingle().then(unwrap)
+        .then(function (perfil) {
+          if (!perfil || perfil.rol !== 'barbero' || perfil.barbero_id == null) return perfil;
+          // El saludo usa el nombre actual del barbero (tabla "barberos"), no una copia guardada en el perfil
+          return db.from('barberos').select('nombre').eq('id', perfil.barbero_id).maybeSingle().then(unwrap)
+            .then(function (b) { if (b && b.nombre) perfil.nombre = b.nombre; return perfil; })
+            .catch(function () { return perfil; });
+        });
     }
 
     // Un barbero solo entra si su cuenta está enlazada a un barbero; el admin entra y ve todas las citas

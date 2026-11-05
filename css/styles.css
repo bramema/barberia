@@ -1040,3 +1040,62 @@
 
 .mi-horario { margin-top: 10px; color: var(--muted); }
 .mi-horario strong { color: var(--white); }
+
+/* ========================================================================== */
+/* 5. Gestión de barberos: formulario desplegable y botones opacos con brillo  */
+/* ========================================================================== */
+.barbers-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.btn__plus { font-size: 1.1rem; line-height: 1; font-weight: 700; transition: transform 0.25s var(--ease); }
+#newBarberBtn.is-open .btn__plus { transform: rotate(45deg); }
+
+/* Tarjeta del formulario "Nuevo barbero": aparece solo al pulsar el botón */
+.barber-form--card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}
+.barber-form:not([hidden]) { animation: form-drop 0.35s var(--ease) both; }
+@keyframes form-drop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Botones del modal: opacos en reposo, se iluminan al pulsar / pasar el cursor / enfocar.
+   Cada botón define su color de brillo con --glow (rgb sin comas para poder usar alfa). */
+#barbersModal .btn {
+  --glow: 255 255 255;                 /* blanco: Acceso, Cancelar, Cerrar */
+  opacity: 0.5;
+  filter: saturate(0.55);
+  box-shadow: none;
+  transition: opacity 0.25s, filter 0.25s, transform 0.25s var(--ease), box-shadow 0.25s, background 0.25s, color 0.25s, border-color 0.25s;
+}
+#barbersModal .btn--blue   { --glow: 30 136 229; }   /* Agregar / Editar / Guardar */
+#barbersModal .btn--danger { --glow: 229 57 53; }    /* Eliminar */
+
+#barbersModal .btn:hover,
+#barbersModal .btn:focus-visible,
+#barbersModal .btn:active,
+#barbersModal .btn.is-open {
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 0 0 3px rgb(var(--glow) / 0.22), 0 8px 24px rgb(var(--glow) / 0.5);
+}
+/* Los botones "ghost" (Acceso, Eliminar, Cancelar, Cerrar) se rellenan con su color al iluminarse */
+#barbersModal .btn--ghost:hover,
+#barbersModal .btn--ghost:focus-visible,
+#barbersModal .btn--ghost:active {
+  border-color: rgb(var(--glow));
+  background: rgb(var(--glow) / 0.16);
+}
+#barbersModal .btn--danger:hover,
+#barbersModal .btn--danger:focus-visible,
+#barbersModal .btn--danger:active {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+#barbersModal .btn--blue:hover,
+#barbersModal .btn--blue:active { background: #3b9bf0; }
+#barbersModal .btn[disabled] { opacity: 0.3; filter: saturate(0.4); box-shadow: none; }
