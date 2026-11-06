@@ -6,8 +6,9 @@
     'use strict';
   
     var cache = [], offlineWarned = false, loggedIn = false, adminUid = null;
-    // Horario de atención de la barbería: 7:00 a 19:00. Ninguna lista ofrece horas fuera de él
-    var BASE = { from: '07:00', to: '19:00' };
+    // Rango de horas que ofrecen las listas: el día completo, de 0:00 a 24:00 (medianoche), cada 30 min.
+    // Cada barbero tiene su propio horario dentro de este rango
+    var BASE = { from: '00:00', to: '24:00' };
     function toMin(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
     function fromMin(m) { return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
     function rangeList(from, to) { var out = []; for (var m = toMin(from); m <= toMin(to); m += 30) out.push(fromMin(m)); return out; }
@@ -20,7 +21,8 @@
     function toISO(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
     function fromISO(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
     function shortDate(iso) { return fromISO(iso).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }); }
-    function addMinutes(t, mins) { var p = t.split(':'), m = (+p[0] * 60 + +p[1] + mins) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+    // Sin dar la vuelta a medianoche: 23:30 + 30 min = "24:00" (así las comparaciones de texto siguen funcionando)
+    function addMinutes(t, mins) { var p = t.split(':'), m = +p[0] * 60 + +p[1] + mins; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
     function load() { return cache; }
 
     // Convierte la respuesta de Supabase en promesa: resuelve con data o lanza el error
@@ -336,7 +338,7 @@
         (x.barberId == null || bid == null || x.barberId === bid);
     }
 
-    // Horas de inicio posibles: de 7:00 a 18:30, y la cita completa debe terminar a más tardar a las 19:00
+    // Horas de inicio posibles: de 0:00 a 23:30, y la cita completa debe terminar a más tardar a medianoche
     function slotsCitas() {
       var cur = load().filter(function (y) { return y.id === editingId; })[0], mins = cur ? cur.mins : 30;
       return rangeList(BASE.from, BASE.to).slice(0, -1).filter(function (t) { return toMin(t) + mins <= toMin(BASE.to); });
@@ -476,18 +478,18 @@
       fillHorarioOptions();
     }
 
-    // Llena las listas de entrada (7:00 a 18:30) y salida (7:30 a 19:00)
+    // Llena las listas de entrada (0:00 a 23:30) y salida (0:30 a 24:00, medianoche)
     function fillHorarioOptions() {
       var horas = rangeList(BASE.from, BASE.to);
       horarioRows().forEach(function (row) {
         Array.prototype.forEach.call(row.querySelectorAll('select'), function (sel, i) {
           sel.innerHTML = '';
-          (i === 0 ? horas.slice(0, -1) : horas.slice(1)).forEach(function (t) { sel.add(new Option(t, t)); });
+          (i === 0 ? horas.slice(0, -1) : horas.slice(1)).forEach(function (t) { sel.add(new Option(t === '24:00' ? '24:00 (medianoche)' : t, t)); });
         });
       });
     }
 
-    // Una hora guardada fuera del horario de atención se ajusta al límite más cercano (7:00 o 19:00)
+    // Una hora guardada fuera del rango de las listas se ajusta al límite más cercano (0:00 o 24:00)
     function clampHora(t, min, max) { return t < min ? min : t > max ? max : t; }
 
     // El editor maneja un bloque por día: si en la base hay varios, se toma del primero al último

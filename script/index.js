@@ -113,10 +113,11 @@
     // Vacaciones aprobadas (función vacaciones_publicas): barbero_id, fecha_inicio, fecha_fin
     var VACACIONES = [];
   
-    // Horario de atención: 7:00 a 19:00 → horas de inicio cada 30 min de 7:00 a 18:30
-    var CIERRE = '19:00';
+    // Cada barbero tiene su propio horario (cualquier hora entre 0:00 y 24:00).
+    // Horas de inicio posibles: cada 30 min de 0:00 a 23:30; la cita debe terminar a más tardar a medianoche
+    var CIERRE = '24:00';
     var SLOTS = [];
-    for (var h = 7; h < 19; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
+    for (var h = 0; h < 24; h++) { SLOTS.push(pad(h) + ':00'); SLOTS.push(pad(h) + ':30'); }
   
     var MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     var DOW = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
@@ -233,8 +234,32 @@
       });
     }
 
+    // ¿Algún barbero (que no esté de vacaciones) atiende ese día a esa hora? Solo esas horas se muestran
+    function someoneAt(date, time) {
+      var dow = fromISO(date).getDay();
+      return HORARIOS.some(function (h) {
+        return h.dow === dow && h.from <= time && time < h.to && !onVacation(h.barberId, date) &&
+          BARBERS.some(function (br) { return br.id === h.barberId; });
+      });
+    }
+
+    // "08:00" → "8:00"; medianoche se muestra como 24:00
+    function hourText(t) { return String(+t.split(':')[0]) + ':' + t.split(':')[1]; }
+
+    // Textos "Atendemos de lunes a sábado, de 8:00 a 23:00": de la primera entrada a la última salida de los barberos
+    function updateHorarioTexto() {
+      var list = HORARIOS.filter(function (h) { return BARBERS.some(function (br) { return br.id === h.barberId; }); });
+      if (!list.length) return;
+      var from = list.reduce(function (m, h) { return h.from < m ? h.from : m; }, '99:99');
+      var to = list.reduce(function (m, h) { return h.to > m ? h.to : m; }, '00:00');
+      var rango = hourText(from) + ' a ' + hourText(to);
+      if ($('horarioTexto')) $('horarioTexto').textContent = 'Elige tus servicios, día y hora, y te mostramos los barberos libres. Atendemos de lunes a sábado, de ' + rango + '.';
+      if ($('footerHorario')) $('footerHorario').textContent = 'Lunes a sábado, ' + hourText(from) + ' – ' + hourText(to);
+    }
+
     // Tras cambiar servicio, citas u horarios: descarta la hora o el barbero elegidos si ya no están libres
     function revalidate() {
+      updateHorarioTexto();
       if (state.time && (isPast(state.date, state.time) || !availableBarbers(state.date, state.time).length)) state.time = null;
       if (state.barber && !(state.time && availableBarbers(state.date, state.time).some(function (br) { return br.id === state.barber; }))) state.barber = null;
       renderCalendar(); renderSlots(); renderBarbers(); updateSummary();
@@ -355,7 +380,8 @@
       if (!state.date) { hint.style.display = 'block'; hint.textContent = 'Primero selecciona un día en el calendario.'; return; }
       hint.style.display = 'none';
       var available = 0;
-      SLOTS.forEach(function (t) {
+      // Solo las horas en que algún barbero atiende ese día (las ocupadas o pasadas se ven deshabilitadas)
+      SLOTS.filter(function (t) { return someoneAt(state.date, t); }).forEach(function (t) {
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'slot'; b.textContent = t; b.setAttribute('role', 'radio');
         var past = isPast(state.date, t);
